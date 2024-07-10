@@ -21,4 +21,16 @@ modules.order
 *.log
 *.str
 
-tags
+# Vivado synthesis files
+*.xml
+*.rpt
+*.xpr
+*.bit
+**/fpga.cache/*
+**/fpga.gen/*
+**/fpga.runs/*
+**/fpga.srcs/*
+**/fpga.hw/*
+
+# ILA log file
+*.csv

@@ -105,7 +105,7 @@ $(PROJECT).xpr: create_project.tcl update_config.tcl
 $(PROJECT).runs/synth_1/$(PROJECT).dcp: create_project.tcl update_config.tcl $(SYN_FILES_REL) $(INC_FILES_REL) $(XDC_FILES_REL) | $(PROJECT).xpr
 	echo "open_project $(PROJECT).xpr" > run_synth.tcl
 	echo "reset_run synth_1" >> run_synth.tcl
-	echo "launch_runs -jobs 4 synth_1" >> run_synth.tcl
+	echo "launch_runs -jobs 72 synth_1" >> run_synth.tcl
 	echo "wait_on_run synth_1" >> run_synth.tcl
 	vivado -nojournal -nolog -mode batch -source run_synth.tcl
 
@@ -113,7 +113,7 @@ $(PROJECT).runs/synth_1/$(PROJECT).dcp: create_project.tcl update_config.tcl $(S
 $(PROJECT).runs/impl_1/$(PROJECT)_routed.dcp: $(PROJECT).runs/synth_1/$(PROJECT).dcp
 	echo "open_project $(PROJECT).xpr" > run_impl.tcl
 	echo "reset_run impl_1" >> run_impl.tcl
-	echo "launch_runs -jobs 4 impl_1" >> run_impl.tcl
+	echo "launch_runs -jobs 72 impl_1" >> run_impl.tcl
 	echo "wait_on_run impl_1" >> run_impl.tcl
 	echo "open_run impl_1" >> run_impl.tcl
 	echo "report_utilization -file $(PROJECT)_utilization.rpt" >> run_impl.tcl
