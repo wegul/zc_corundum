@@ -12,6 +12,7 @@
 /*
  * mqnic core logic
  */
+(* DONT_TOUCH = "yes" *)
 module mqnic_core #
 (
     // FW and board IDs
