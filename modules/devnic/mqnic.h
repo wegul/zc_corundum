@@ -26,8 +26,8 @@
 #include <linux/i2c-algo-bit.h>
 
  /*Devmem patch*/
-// #include <net/page_pool/types.h>
-// #include <net/page_pool/helpers.h>
+#include <net/page_pool/types.h>
+#include <net/page_pool/helpers.h>
 
 
 #define DRIVER_NAME "mqnic"
