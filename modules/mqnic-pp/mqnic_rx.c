@@ -156,11 +156,11 @@ void mqnic_close_rx_ring(struct mqnic_ring* ring) {
 	mqnic_res_free(ring->interface->rxq_res, ring->index);
 	ring->index = -1;
 
-	if (ring->pp)
-	{
+	if (ring->pp) {
+		// printk("page_pool_destroy, ring idx= %d\n", ring->index);
 		page_pool_destroy(ring->pp);
 	}
-	
+
 }
 
 int mqnic_enable_rx_ring(struct mqnic_ring* ring) {
@@ -205,7 +205,6 @@ void mqnic_rx_write_prod_ptr(struct mqnic_ring* ring) {
 
 void mqnic_free_rx_desc(struct mqnic_ring* ring, int index) {
 	struct mqnic_rx_info* rx_info = &ring->rx_info[index];
-	// struct page *page = rx_info->page;
 
 	if (!rx_info->page)
 		return;
@@ -214,7 +213,8 @@ void mqnic_free_rx_desc(struct mqnic_ring* ring, int index) {
 		dma_unmap_len(rx_info, len), DMA_FROM_DEVICE);
 	rx_info->dma_addr = 0;
 	// __free_pages(rx_info->page, rx_info->page_order);
-	page_pool_put_full_page(ring->pp, rx_info->page, true);
+	// printk("mqnic_free_rx_desc: page_pool_put_full_page, ring idx= %d, pfn= %lx\n", ring->index, page_to_pfn(rx_info->page));
+	page_pool_put_full_page(ring->pp, rx_info->page, false);
 	rx_info->page = NULL;
 }
 
@@ -261,7 +261,8 @@ int mqnic_prepare_rx_desc(struct mqnic_ring* ring, int index) {
 	if (unlikely(dma_mapping_error(ring->dev, dma_addr))) {
 		dev_err(ring->dev, "%s: DMA mapping failed on interface %d",
 			__func__, ring->interface->index);
-		__free_pages(page, page_order);
+		// __free_pages(page, page_order);
+		page_pool_put_full_page(ring->pp, page, false);
 		return -1;
 	}
 
@@ -372,15 +373,17 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 		}
 
 		// unmap
+		// swg comment: this is to prevent the page being dma-overwritten
 		dma_unmap_page(dev, dma_unmap_addr(rx_info, dma_addr),
 			dma_unmap_len(rx_info, len), DMA_FROM_DEVICE);
 		rx_info->dma_addr = 0;
+
 
 		dma_sync_single_range_for_cpu(dev, rx_info->dma_addr, rx_info->page_offset,
 			rx_info->len, DMA_FROM_DEVICE);
 
 		__skb_fill_page_desc(skb, 0, page, rx_info->page_offset, len);
-		rx_info->page = NULL;
+		rx_info->page = NULL; // This should be freed later in rx_drop
 
 		skb_shinfo(skb)->nr_frags = 1;
 		skb->len = len;
@@ -398,6 +401,11 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 
 		cq_cons_ptr++;
 		cq_index = cq_cons_ptr & cq->size_mask;
+		// printk("Process CQ: leaving rx_drop...\n");
+		// Page pool recycle 
+		// printk("Process CQ: release...\n");
+		// mqnic_release_page(rx_ring->pp, rx_info->page);
+		// rx_info->page = NULL;// NULL means the skb is handed in
 	}
 
 	// update CQ consumer pointer
@@ -421,8 +429,10 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 	// update consumer pointer
 	WRITE_ONCE(rx_ring->cons_ptr, ring_cons_ptr);
 
+	// printk("Process CQ: entering refill...\n");
 	// replenish buffers
 	mqnic_refill_rx_buffers(rx_ring);
+	// printk("Process CQ: leaving refill...\n");
 
 	return done;
 }
@@ -436,13 +446,15 @@ int mqnic_poll_rx_cq(struct napi_struct* napi, int budget) {
 	int done;
 
 	done = mqnic_process_rx_cq(cq, budget);
-
+	printk("MQNIC: done process_rx_cq\n");
 	if (done == budget)
 		return done;
 
 	napi_complete(napi);
+	printk("MQNIC: done napi_complete\n");
 
 	mqnic_arm_cq(cq);
+	printk("MQNIC: done arm_cq\n");
 
 	return done;
 }

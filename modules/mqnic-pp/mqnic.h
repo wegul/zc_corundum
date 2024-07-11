@@ -30,7 +30,7 @@
 
 
 #define DRIVER_NAME "mqnic"
-#define DRIVER_VERSION "0.1"
+#define DRIVER_VERSION "2.0"// with page_pool upgrade
 
 #include "mqnic_hw.h"
 
@@ -225,7 +225,16 @@ struct mqnic_rx_info {
 	dma_addr_t dma_addr;
 	u32 len;
 };
-
+// /* A list of pages registered with the device during setup and used by a queue
+//  * as buffers
+//  */
+// struct queue_page_list {
+// 	u32 id; /* unique id */
+// 	u32 num_entries;
+// 	struct page** pages; /* list of num_entries pages */
+// 	dma_addr_t* page_buses; /* the dma addrs of the pages */
+// 	/* "bus" means buf_state */
+// };
 struct mqnic_ring {
 	// written on enqueue (i.e. start_xmit)
 	u32 prod_ptr;
@@ -270,6 +279,7 @@ struct mqnic_ring {
 	int enabled;
 
 	struct page_pool* pp;
+	struct queue_page_list* qpl;
 
 	u8 __iomem* hw_addr;
 } ____cacheline_aligned_in_smp;
@@ -600,6 +610,7 @@ void mqnic_close_cq(struct mqnic_cq* cq);
 void mqnic_cq_read_prod_ptr(struct mqnic_cq* cq);
 void mqnic_cq_write_cons_ptr(struct mqnic_cq* cq);
 void mqnic_arm_cq(struct mqnic_cq* cq);
+
 
 // mqnic_tx.c
 struct mqnic_ring* mqnic_create_tx_ring(struct mqnic_if* interface);
