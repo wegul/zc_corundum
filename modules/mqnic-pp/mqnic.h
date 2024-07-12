@@ -31,7 +31,7 @@
 
 
 #define DRIVER_NAME "mqnic"
-#define DRIVER_VERSION "2.0"// with page_pool upgrade
+#define DRIVER_VERSION "1.1"// with page_pool upgrade
 
 #include "mqnic_hw.h"
 
