@@ -359,6 +359,8 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 				__func__, rx_ring->index);
 			break;
 		}
+		// swg: recycle skb to remove leak?
+		skb_mark_for_recycle(skb);
 
 		// RX hardware timestamp
 		if (interface->if_features & MQNIC_IF_FEATURE_PTP_TS)
@@ -429,10 +431,8 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 	// update consumer pointer
 	WRITE_ONCE(rx_ring->cons_ptr, ring_cons_ptr);
 
-	// printk("Process CQ: entering refill...\n");
 	// replenish buffers
 	mqnic_refill_rx_buffers(rx_ring);
-	// printk("Process CQ: leaving refill...\n");
 
 	return done;
 }
@@ -452,7 +452,5 @@ int mqnic_poll_rx_cq(struct napi_struct* napi, int budget) {
 	napi_complete(napi);
 
 	mqnic_arm_cq(cq);
-	printk("MQNIC: done arm_cq\n");
-
 	return done;
 }
