@@ -291,7 +291,7 @@ int mqnic_refill_rx_buffers(struct mqnic_ring* ring) {
 		ret = mqnic_prepare_rx_desc(ring, ring->prod_ptr & ring->size_mask);
 		if (ret)
 			break;
-		ring->prod_ptr++;
+		ring->prod_ptr++;// For every desc, the prod_ptr increments 
 	}
 
 	// enqueue on NIC
