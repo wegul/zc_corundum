@@ -359,6 +359,7 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 				__func__, rx_ring->index);
 			break;
 		}
+		skb_mark_for_recycle(skb);
 
 		// RX hardware timestamp
 		if (interface->if_features & MQNIC_IF_FEATURE_PTP_TS)
@@ -383,7 +384,7 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 			rx_info->len, DMA_FROM_DEVICE);
 
 		__skb_fill_page_desc(skb, 0, page, rx_info->page_offset, len);
-		rx_info->page = NULL; // This should be freed later in rx_drop
+		rx_info->page = NULL;
 
 		skb_shinfo(skb)->nr_frags = 1;
 		skb->len = len;
@@ -401,11 +402,6 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 
 		cq_cons_ptr++;
 		cq_index = cq_cons_ptr & cq->size_mask;
-		// printk("Process CQ: leaving rx_drop...\n");
-		// Page pool recycle 
-		// printk("Process CQ: release...\n");
-		// mqnic_release_page(rx_ring->pp, rx_info->page);
-		// rx_info->page = NULL;// NULL means the skb is handed in
 	}
 
 	// update CQ consumer pointer
@@ -452,7 +448,6 @@ int mqnic_poll_rx_cq(struct napi_struct* napi, int budget) {
 	napi_complete(napi);
 
 	mqnic_arm_cq(cq);
-	printk("MQNIC: done arm_cq\n");
 
 	return done;
 }
