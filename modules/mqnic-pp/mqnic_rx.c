@@ -4,6 +4,7 @@
  */
 
 #include "mqnic.h"
+#include "debug.h"
 
 struct mqnic_ring* mqnic_create_rx_ring(struct mqnic_if* interface) {
 	struct mqnic_ring* ring;
@@ -238,6 +239,7 @@ int mqnic_prepare_rx_desc(struct mqnic_ring* ring, int index) {
 	struct page* page = rx_info->page;
 	u32 page_order = ring->page_order;
 	u32 len = PAGE_SIZE << page_order;
+	// len = 74;//debug: see if num of desc change
 	dma_addr_t dma_addr;
 
 	if (unlikely(page)) {
@@ -385,6 +387,10 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 
 		__skb_fill_page_desc(skb, 0, page, rx_info->page_offset, len);
 		rx_info->page = NULL;
+
+		pr_info("===============Cpl index= %d, in ring<%d>===============\n", cq_index, rx_ring->index);
+		print_pg(page, len);
+		pr_cont("\n===============END===============\n");
 
 		skb_shinfo(skb)->nr_frags = 1;
 		skb->len = len;
