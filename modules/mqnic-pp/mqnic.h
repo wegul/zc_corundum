@@ -220,11 +220,14 @@ struct mqnic_tx_info {
 };
 
 struct mqnic_rx_info {
-	struct page* page;
+	struct page* pld_page;
+	struct page* hdr_page;
 	u32 page_order;
 	u32 page_offset;
-	dma_addr_t dma_addr;
-	u32 len;
+	dma_addr_t pld_dma_addr;
+	u32 pld_len;
+	dma_addr_t hdr_dma_addr;
+	u32 hdr_len;
 };
 // /* A list of pages registered with the device during setup and used by a queue
 //  * as buffers
@@ -263,9 +266,14 @@ struct mqnic_ring {
 	u32 desc_block_size;
 	u32 log_desc_block_size;
 
-	size_t buf_size;
-	u8* buf;// This is a buf for descriptors that will really land in NIC
-	dma_addr_t buf_dma_addr;
+	size_t buf_size;// ring->size * stride
+	u8* buf;// This is payload buf for descriptors that will really land in NIC
+	dma_addr_t buf_dma_addr;// payload_desc buf, used to store the descriptr for payloads
+
+	/*HDS: below is coherent header buf*/
+	u8* hdr_buf;
+	u16 hdr_len;//fixed 66B (Eth+IP+TCP)
+	dma_addr_t hdr_bufs_addr;
 
 	union {
 		struct mqnic_tx_info* tx_info;

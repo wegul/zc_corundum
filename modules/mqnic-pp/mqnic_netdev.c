@@ -65,7 +65,7 @@ int mqnic_start_port(struct net_device *ndev)
 		else
 			q->page_order = ilog2((ndev->mtu + ETH_HLEN + PAGE_SIZE - 1) / PAGE_SIZE - 1) + 1;
 
-		ret = mqnic_open_rx_ring(q, priv, cq, priv->rx_ring_size, 1);
+		ret = mqnic_open_rx_ring(q, priv, cq, priv->rx_ring_size, 2);
 		if (ret) {
 			mqnic_destroy_rx_ring(q);
 			mqnic_destroy_cq(cq);
