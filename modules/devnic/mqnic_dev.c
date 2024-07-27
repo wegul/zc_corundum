@@ -8,21 +8,21 @@
 
 #include <linux/uaccess.h>
 
-static int mqnic_open(struct inode* inode, struct file* file) {
+static int mqnic_open_device(struct inode* inode, struct file* file) {
 	// struct miscdevice *miscdev = file->private_data;
 	// struct mqnic_dev *mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
 
 	return 0;
 }
 
-static int mqnic_release(struct inode* inode, struct file* file) {
+static int mqnic_release_device(struct inode* inode, struct file* file) {
 	// struct miscdevice *miscdev = file->private_data;
 	// struct mqnic_dev *mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
 
 	return 0;
 }
 
-static int mqnic_mmap(struct file* file, struct vm_area_struct* vma) {
+static int mqnic_mmap_device(struct file* file, struct vm_area_struct* vma) {
 	struct miscdevice* miscdev = file->private_data;
 	struct mqnic_dev* mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
 	int index;
@@ -70,7 +70,7 @@ static int mqnic_mmap(struct file* file, struct vm_area_struct* vma) {
 	return -EINVAL;
 }
 
-static long mqnic_ioctl(struct file* file, unsigned int cmd, unsigned long arg) {
+static long mqnic_ioctl_device(struct file* file, unsigned int cmd, unsigned long arg) {
 	struct miscdevice* miscdev = file->private_data;
 	struct mqnic_dev* mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
 	size_t minsz;
@@ -164,8 +164,8 @@ static long mqnic_ioctl(struct file* file, unsigned int cmd, unsigned long arg) 
 
 const struct file_operations mqnic_fops = {
 	.owner = THIS_MODULE,
-	.open = mqnic_open,
-	.release = mqnic_release,
-	.mmap = mqnic_mmap,
-	.unlocked_ioctl = mqnic_ioctl,
+	.open = mqnic_open_device,
+	.release = mqnic_release_device,
+	.mmap = mqnic_mmap_device,
+	.unlocked_ioctl = mqnic_ioctl_device,
 };

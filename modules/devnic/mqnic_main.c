@@ -10,14 +10,14 @@
 #include <linux/reset.h>
 #include <linux/rtc.h>
 
-MODULE_DESCRIPTION("mqnic driver");
+MODULE_DESCRIPTION("devnic driver");
 MODULE_AUTHOR("swg");
 MODULE_LICENSE("GPL");
 MODULE_VERSION(DRIVER_VERSION);
 
 unsigned int mqnic_num_eq_entries = 1024;
 unsigned int mqnic_num_txq_entries = 1024;
-unsigned int mqnic_num_rxq_entries = 1024;
+unsigned int mqnic_num_rxq_entries = 256;
 
 module_param_named(num_eq_entries, mqnic_num_eq_entries, uint, 0444);
 MODULE_PARM_DESC(num_eq_entries, "number of entries to allocate per event queue (default: 1024)");

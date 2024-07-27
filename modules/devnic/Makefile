@@ -22,13 +22,14 @@ mqnic-y += mqnic_board.o
 mqnic-y += mqnic_clk_info.o
 mqnic-y += mqnic_stats.o
 mqnic-y += mqnic_tx.o
+mqnic-y += rx_utils.o
 mqnic-y += mqnic_rx.o
 mqnic-y += mqnic_cq.o
 mqnic-y += mqnic_eq.o
 mqnic-y += mqnic_ethtool.o
 
 ifneq ($(DEBUG),)
-ccflags-y += -DDEBUG
+ccflags-y += -DDEBUG -g
 endif
 
 else
