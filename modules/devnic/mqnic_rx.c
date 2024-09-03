@@ -59,7 +59,7 @@ int hds_mqnic_open_rx_ring(struct mqnic_ring* ring, struct mqnic_priv* priv,
     {
         struct page_pool* pp = ring->pp;
         if (pp->mp_priv) {
-            pr_debug("%s: We actually successfully bound dmabuf in ring<%d>\n", __func__, ring->index);
+            pr_debug("%s: We actually successfully bound dmabuf in ring<%d> of IF<%d>\n", __func__, ring->index, priv->interface->index);
         }
         else {
             pr_debug("%s: Kernel page in ring<%d>\n", __func__, ring->index);
@@ -505,14 +505,16 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 
         int trim = 0;
         // Hack! modify the header length field here.
-        if (cpl->len > rx_info->hdr_len) {
-            trim = hack_trim_header(hdr_page, rx_ring->hdr_len);
-            if (trim > 0) {
-                netdev_warn(priv->ndev, "%s: ring %d dropping LARGE frame (header length %d)",
-                    __func__, rx_ring->index, hdr_len);
-                rx_ring->dropped_packets++;
-                goto rx_drop;
-            }
+        if (cpl->len > rx_ring->hdr_len) {
+            trim = -12; //12 bytes of option field
+            // trim = hack_trim_header(hdr_page, rx_ring->hdr_len);
+            // pr_err("trim=%d\n", trim);
+            // if (trim > 0) {
+            //     netdev_warn(priv->ndev, "%s: ring %d dropping LARGE frame (header length %d), trim=%d",
+            //         __func__, rx_ring->index, hdr_len, trim);
+            //     rx_ring->dropped_packets++;
+            //     goto rx_drop;
+            // }
         }
 
         // skb = mqnic_skb_copy_header(priv->ndev, &cq->napi, hdr_page, 128);
@@ -550,10 +552,10 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 
         if (cpl->len > hdr_len) {
             /* TCP, large packet */
-            if (rx_ring->pp->mp_priv) {
-                pr_err("About to append frag %lx\n", rx_info->pld_dma_addr);
-                mb();
-            }
+            // if (rx_ring->pp->mp_priv) {
+            //     pr_err("About to append frag %lx\n", rx_info->pld_dma_addr);
+            //     mb();
+            // }
             int error = mqnic_skb_append_frag(&cq->napi, pld_netmem, pld_len, skb, priv);
             if (unlikely(error != 0)) {
                 page_pool_put_full_netmem(rx_ring->pp, pld_netmem, false);

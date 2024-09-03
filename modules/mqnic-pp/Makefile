@@ -29,6 +29,7 @@ mqnic-y += mqnic_ethtool.o
 
 ifneq ($(DEBUG),)
 ccflags-y += -DDEBUG
+ccflags-y += -O2
 endif
 
 else
