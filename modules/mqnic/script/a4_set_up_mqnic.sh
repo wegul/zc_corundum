@@ -30,14 +30,14 @@ sudo insmod ${DIR}/mqnic.ko
 echo "sudo ip link set dev enp175s0np0 up"
 sudo ip link set dev enp175s0np0 up
 
-echo "sudo ip addr add 10.0.0.4/24 dev enp175s0np0"
-sudo ip addr add 10.0.0.4/24 dev enp175s0np0
+echo "sudo ip addr add 10.0.0.4/8 dev enp175s0np0"
+sudo ip addr add 10.0.0.4/8 dev enp175s0np0
 
 echo "sudo ip link set dev enp175s0np1 up"
 sudo ip link set dev enp175s0np1 up
 
-echo "sudo ip addr add 10.0.1.4/24 dev enp175s0np1"
-sudo ip addr add 10.0.1.4/24 dev enp175s0np1
+echo "sudo ip addr add 10.0.1.4/8 dev enp175s0np1"
+sudo ip addr add 10.0.1.4/8 dev enp175s0np1
 
 echo "sudo ethtool -X enp175s0np0 equal 1"
 sudo ethtool -X enp175s0np0 equal 1

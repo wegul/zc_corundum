@@ -1,13 +1,13 @@
 #!/bin/bash
 
-DIR="/home/weigao/zc_corundum/modules/mqnic"
+DIR="/home/weigao/zc_corundum/modules/mqnic_ktime"
 MK_FLAG=1
 
 echo "sudo rmmod mqnic"
 sudo rmmod mqnic
 
-# echo "Clean module: make clean"
-# make clean
+echo "Clean module: make clean"
+make clean
 
 for file in "${DIR}"/*; do
     if [[ "${file}" =~ ^.*"mqnic.ko" ]]; then
