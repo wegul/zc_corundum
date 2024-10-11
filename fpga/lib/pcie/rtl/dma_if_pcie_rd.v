@@ -1018,14 +1018,14 @@ always @* begin
                         last_cycle = 1'b0;
 
                         start_offset_next = addr_next;
-                        {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
+                        // {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
                     end else begin
                         // one cycle
                         cycle_byte_count_next = op_count_next;
                         last_cycle = 1'b1;
 
                         start_offset_next = addr_next;
-                        {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
+                        // {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
                     end
                 end else begin
                     // last completion
@@ -1038,17 +1038,20 @@ always @* begin
                         last_cycle = 1'b0;
 
                         start_offset_next = addr_next;
-                        {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
+                        // {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
                     end else begin
                         // one cycle
                         cycle_byte_count_next = op_count_next;
                         last_cycle = 1'b1;
 
                         start_offset_next = addr_next;
-                        {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
+                        // {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
                     end
                 end
-
+                //swg: bug fix
+                end_offset_next = start_offset_next + cycle_byte_count_next - 1;
+                ram_wrap_next = (RAM_DATA_WIDTH / 8 - start_offset_next < cycle_byte_count_next) ? 1'b1 : 1'b0;
+                
                 ram_mask_0_next = {RAM_SEG_COUNT{1'b1}} << (start_offset_next >> $clog2(RAM_SEG_BE_WIDTH));
                 ram_mask_1_next = {RAM_SEG_COUNT{1'b1}} >> (RAM_SEG_COUNT-1-(end_offset_next >> $clog2(RAM_SEG_BE_WIDTH)));
 

@@ -5,7 +5,9 @@
 
 // Language: Verilog 2001
 
-`resetall `timescale 1ns / 1ps `default_nettype none
+`resetall 
+`timescale 1ns / 1ps 
+`default_nettype none
 
 /*
  * Receive engine
@@ -455,41 +457,6 @@ module rx_engine #(
 
   assign s_axis_rx_csum_ready = s_axis_rx_csum_ready_reg;
 
-  // reg [15:0] stall_cnt = 0;
-  // wire stalled = stall_cnt[12];
-
-  // // assign dbg = stalled;
-
-  // always @(posedge clk) begin
-  //     if (rst) begin
-  //         stall_cnt <= 0;
-  //     end else begin
-  //         if (s_axis_rx_req_ready) begin
-  //             stall_cnt <= 0;
-  //         end else begin
-  //             stall_cnt <= stall_cnt + 1;
-  //         end
-  //     end
-  // end
-
-  // ila_0 ila_inst (
-  //     .clk(clk),
-  //     .trig_out(),
-  //     .trig_out_ack(1'b0),
-  //     .trig_in(1'b0),
-  //     .trig_in_ack(),
-  //     .probe0({desc_table_active, desc_table_rx_done, desc_table_invalid, desc_table_desc_fetched, desc_table_data_written, desc_table_cpl_write_done, pkt_table_active,
-  //         m_axis_dma_read_desc_len, m_axis_dma_read_desc_tag, m_axis_dma_read_desc_valid, m_axis_dma_read_desc_ready,
-  //         s_axis_dma_read_desc_status_tag, s_axis_dma_read_desc_status_valid,
-  //         m_axis_dma_write_desc_len, m_axis_dma_write_desc_tag, m_axis_dma_write_desc_valid, m_axis_dma_write_desc_ready,
-  //         s_axis_dma_write_desc_status_tag, s_axis_dma_write_desc_status_valid}),
-  //     .probe1(0),
-  //     .probe2(0),
-  //     .probe3(s_axis_rx_req_ready),
-  //     .probe4({desc_table_start_ptr_reg, desc_table_rx_finish_ptr, desc_table_desc_read_start_ptr_reg, desc_table_data_write_start_ptr_reg, desc_table_cpl_enqueue_start_ptr_reg, desc_table_finish_ptr_reg, stall_cnt}),
-  //     .probe5(0)
-  // );
-
   wire [QUEUE_INDEX_WIDTH-1:0] queue_map_resp_queue;
   wire [CL_DESC_TABLE_SIZE+1-1:0] queue_map_resp_tag;
   wire queue_map_resp_valid;
@@ -790,8 +757,6 @@ module rx_engine #(
           m_axis_dma_write_desc_len_int = desc_table_dma_len[s_axis_desc_tid & DESC_PTR_MASK] - desc_len_reg;
           desc_done_next = 1'b1;
         end
-        //hack!!! fix dma write len=0x4a
-        m_axis_dma_write_desc_len_int = {DMA_LEN_WIDTH{1'b0}} | 8'h4a;
         m_axis_dma_write_desc_tag_int = s_axis_desc_tid & DESC_PTR_MASK;
 
         desc_table_write_start_ptr = s_axis_desc_tid;

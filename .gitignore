@@ -34,3 +34,6 @@ modules.order
 
 # ILA log file
 *.csv
+
+# license file
+*.lic
