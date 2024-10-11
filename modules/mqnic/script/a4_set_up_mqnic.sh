@@ -43,7 +43,7 @@ echo "sudo ethtool -X enp175s0np0 equal 1"
 sudo ethtool -X enp175s0np0 equal 1
 
 echo "sudo ethtool -X enp175s0np1 equal 1"
-sudo ethtool -X enp175s0np0 equal 1
+sudo ethtool -X enp175s0np1 equal 1
 
 echo "sudo arp -s 10.0.0.5 00:0a:35:06:18:7a"
 sudo arp -s 10.0.0.5 00:0a:35:06:18:7a
