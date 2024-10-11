@@ -293,7 +293,7 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
     int done = 0;
     int budget = napi_budget;
     u32 len;
-    ktime_t start_time, stop_time, elapsed_time;// measure critical section...
+    // ktime_t start_time, stop_time, elapsed_time;// measure critical section...
 
     if (unlikely(!priv || !priv->port_up))
         return done;
@@ -350,7 +350,7 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
             skb->ip_summed = CHECKSUM_COMPLETE;
         }
 
-        start_time = ktime_get();
+        // start_time = ktime_get();
         //measuring zone
         {
             // unmap
@@ -369,17 +369,17 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
             skb->data_len = len;
             skb->truesize += rx_info->len;
         }
-        stop_time = ktime_get();
-        elapsed_time = ktime_sub(stop_time, start_time);
-        avg_proc_time += elapsed_time;
-        cnt++;
-        if (cnt >= 10) {
-            avg_proc_time /= cnt;
-            // pr_debug("Elapsed Time : %lld\n", ktime_to_ns(elapsed_time));
-            pr_debug("Average elapsed Time : %d\n", avg_proc_time);
-            cnt = 0;
-            avg_proc_time = 0;
-        }
+        // stop_time = ktime_get();
+        // elapsed_time = ktime_sub(stop_time, start_time);
+        // avg_proc_time += elapsed_time;
+        // cnt++;
+        // if (cnt >= 10) {
+        //     avg_proc_time /= cnt;
+        //     // pr_debug("Elapsed Time : %lld\n", ktime_to_ns(elapsed_time));
+        //     pr_debug("Average elapsed Time : %d\n", avg_proc_time);
+        //     cnt = 0;
+        //     avg_proc_time = 0;
+        // }
 
         // hand off SKB
         napi_gro_frags(&cq->napi);

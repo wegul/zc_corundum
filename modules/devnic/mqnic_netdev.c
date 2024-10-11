@@ -96,11 +96,8 @@ int mqnic_start_port(struct net_device* ndev) {
             goto fail;
         }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
         netif_napi_add_tx(ndev, &cq->napi, mqnic_poll_tx_cq);
-#else
-        netif_tx_napi_add(ndev, &cq->napi, mqnic_poll_tx_cq, NAPI_POLL_WEIGHT);
-#endif
+
         napi_enable(&cq->napi);
 
         mqnic_arm_cq(cq);
@@ -750,8 +747,9 @@ struct net_device* mqnic_create_netdev(struct mqnic_if* interface, int index,
     priv->if_features = interface->if_features;
 
     priv->txq_count = min_t(u32, mqnic_res_get_count(interface->txq_res), 256);
-    // priv->rxq_count = min_t(u32, mqnic_res_get_count(interface->rxq_res), num_online_cpus());
-    priv->rxq_count = min_t(u32, mqnic_res_get_count(interface->rxq_res), 1);
+    // Hack! Keep only one rx_queue
+    priv->rxq_count = min_t(u32, mqnic_res_get_count(interface->rxq_res), num_online_cpus());
+    // priv->rxq_count = 1;
 
 
     priv->tx_ring_size = roundup_pow_of_two(clamp_t(u32, mqnic_num_txq_entries,

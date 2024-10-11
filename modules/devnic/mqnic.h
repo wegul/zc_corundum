@@ -659,7 +659,7 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget);
 void mqnic_rx_irq(struct mqnic_cq* cq);
 int mqnic_poll_rx_cq(struct napi_struct* napi, int budget);
 
-#define HW_HDR_SIZE 66
+#define HW_HDR_SIZE 96
 int hack_trim_header(struct page* hdr_page, u16 hw_hdr_len);
 struct sk_buff* mqnic_skb_copy_header(struct net_device* dev, struct napi_struct* napi,
     struct page* page, u16 len);
