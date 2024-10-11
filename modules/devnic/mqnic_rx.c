@@ -342,7 +342,7 @@ int mqnic_prepare_rx_desc(struct mqnic_ring* ring, int index) {
         pld_dma_addr = page_pool_get_dma_addr_netmem(pld_netmem);
     }
     else {
-        pr_debug("alloc pld failed dma_addr=%lx\n", pld_dma_addr);
+        pr_debug("alloc pld failed dma_addr=%llx\n", pld_dma_addr);
         return -1;
     }
 
@@ -379,27 +379,6 @@ int mqnic_prepare_rx_desc(struct mqnic_ring* ring, int index) {
     rx_info->pld_dma_addr = pld_dma_addr;
     rx_info->pld_len = pld_len;
 
-    // if (ring->pp->mp_priv) {
-    //     pr_err("Refill pld_dma_addr: %lx\n", rx_info->pld_dma_addr);
-    //     // struct page* pld_net_page = netmem_to_page(pld_netmem);
-    //     // /*Jul 27, 12:49
-    //     //     if i insist on accessing it, would server crash?
-    //     //     Answer: it would give a seg fault. Log says GPF.
-    //     // */
-    //     // pr_err("if i insist on accessing it, would server crash?\n");
-    //     // mb();
-    //     // print_pg(pld_net_page, 16);
-    //     // // if (!pld_net_page) {
-    //     // //     pr_cont("%s: Invalid Access To netmem bc it is backed by net_iov\n", __func__);
-    //     // //     return -1;
-    //     // // }
-    //     // // else {
-    //     // //     print_pg(pld_net_page, 16);
-    //     // // }
-    //     mb();
-    // }
-
-
     return 0;
 }
 
@@ -410,6 +389,7 @@ int mqnic_refill_rx_buffers(struct mqnic_ring* ring) {
     if (missing < 8)
         return 0;
 
+    // pr_debug("%s: replenish %d rx buffer \n", __func__, missing);
     for (; missing-- > 0;) {
         ret = mqnic_prepare_rx_desc(ring, ring->prod_ptr & ring->size_mask);
         if (ret)
@@ -420,8 +400,16 @@ int mqnic_refill_rx_buffers(struct mqnic_ring* ring) {
     // enqueue on NIC
     dma_wmb();
     mqnic_rx_write_prod_ptr(ring);
+
+    // Swg debug: 
+    struct mqnic_cq* cq = ring->cq;
+    if (cq->enabled) {
+        mqnic_arm_cq(cq);
+    }
+
     return ret;
 }
+static int avg_proc_time = 0, cnt = 0;//sample every 10 packet
 
 int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
     struct mqnic_if* interface = cq->interface;
@@ -440,6 +428,8 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
     int done = 0;
     int budget = napi_budget;
     u16 hdr_len, pld_len;
+    // ktime_t start_time, stop_time, elapsed_time;// measure critical section...
+
     if (unlikely(!priv || !priv->port_up))
         return done;
 
@@ -478,45 +468,6 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
             break;
         }
 
-        /* Unmap is purposed to prevent data in buf being overwritten.
-        However, in a recyclable system, it is not possible to double-access buf. So maybe cancel this op.
-        */
-        dma_unmap_page(dev, dma_unmap_addr(rx_info, hdr_dma_addr),
-            dma_unmap_len(rx_info, hdr_len), DMA_FROM_DEVICE);
-        dma_sync_single_range_for_cpu(dev, rx_info->hdr_dma_addr, rx_info->page_offset,
-            hdr_len, DMA_FROM_DEVICE);
-        dma_sync_single_for_cpu(dev, rx_info->pld_dma_addr, pld_len, DMA_FROM_DEVICE);
-        //     /*========================================================================================================*/
-        // debug:
-        //     if (rx_ring->pp->mp_priv) {
-        //         pr_err("%s: PROCESS CQ in ring<%d> with mp-priv:%lx !!!! Cpl_len=%d, hdr_len=%d \n",
-        //             __func__, rx_ring->index, rx_ring->pp->mp_priv, cpl->len, hdr_len);
-        //         print_pg(hdr_page, hdr_len);
-        //         pr_err("Process pld_dma_addr: %lx\n", rx_info->pld_dma_addr);
-        //         mb();
-        //     }
-        //     /*========================================================================================================*/
-
-        rx_info->hdr_dma_addr = 0;
-        rx_info->pld_dma_addr = 0;
-        // Clear refcnt. (Q: Actually is it better to rely on page->refcnt?)
-        rx_info->hdr_page = NULL;
-        rx_info->pld_netmem = NULL;
-
-        int trim = 0;
-        // Hack! modify the header length field here.
-        if (cpl->len > rx_ring->hdr_len) {
-            trim = -12; //12 bytes of option field
-            // trim = hack_trim_header(hdr_page, rx_ring->hdr_len);
-            // pr_err("trim=%d\n", trim);
-            // if (trim > 0) {
-            //     netdev_warn(priv->ndev, "%s: ring %d dropping LARGE frame (header length %d), trim=%d",
-            //         __func__, rx_ring->index, hdr_len, trim);
-            //     rx_ring->dropped_packets++;
-            //     goto rx_drop;
-            // }
-        }
-
         // skb = mqnic_skb_copy_header(priv->ndev, &cq->napi, hdr_page, 128);
         skb = napi_get_frags(&cq->napi);
         if (unlikely(!skb)) {
@@ -532,13 +483,6 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 
         skb_record_rx_queue(skb, rx_ring->index);
 
-        //Fill the header field, aka frag[0]
-        __skb_fill_page_desc(skb, 0, hdr_page, rx_info->page_offset, hdr_len + trim);
-        skb_shinfo(skb)->nr_frags = 1;
-        skb->len = hdr_len + trim;
-        skb->data_len = hdr_len + trim;
-        skb->truesize += hdr_len + trim;
-
         // RX hardware checksum
         if (priv->ndev->features & NETIF_F_RXCSUM) {
             skb->csum = csum_unfold((__sum16)cpu_to_be16(le16_to_cpu(cpl->rx_csum)));
@@ -549,22 +493,70 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
             skb->ip_summed = CHECKSUM_UNNECESSARY;
         }
 
+        // start_time = ktime_get();
+        //measuring zone
+        {
+            /* Unmap is purposed to prevent data in buf being overwritten.
+                  However, in a recyclable system, it is not possible to double-access buf. So maybe cancel this op.
+                  */
+            dma_unmap_page(dev, dma_unmap_addr(rx_info, hdr_dma_addr),
+                dma_unmap_len(rx_info, hdr_len), DMA_FROM_DEVICE);
+            dma_sync_single_range_for_cpu(dev, rx_info->hdr_dma_addr, rx_info->page_offset,
+                hdr_len, DMA_FROM_DEVICE);
+            dma_sync_single_for_cpu(dev, rx_info->pld_dma_addr, pld_len, DMA_FROM_DEVICE);
 
-        if (cpl->len > hdr_len) {
-            /* TCP, large packet */
-            // if (rx_ring->pp->mp_priv) {
-            //     pr_err("About to append frag %lx\n", rx_info->pld_dma_addr);
-            //     mb();
+            rx_info->hdr_dma_addr = 0;
+            rx_info->pld_dma_addr = 0;
+            // Clear refcnt. (Q: Actually is it better to rely on page->refcnt?)
+            rx_info->hdr_page = NULL;
+            rx_info->pld_netmem = NULL;
+
+            int trim = 0;
+            // Hack! modify the header length field here.
+            // if (cpl->len > rx_ring->hdr_len) {
+            //     trim = -12; //12 bytes of option field 66-12=54
+            //     // trim = hack_trim_header(hdr_page, rx_ring->hdr_len);
+            //     pr_err("trim=%d\n", trim);
+            //     // if (trim > 0) {
+            //     //     netdev_warn(priv->ndev, "%s: ring %d dropping LARGE frame (header length %d), trim=%d",
+            //     //         __func__, rx_ring->index, hdr_len, trim);
+            //     //     rx_ring->dropped_packets++;
+            //     //     goto rx_drop;
+            //     // }
             // }
-            int error = mqnic_skb_append_frag(&cq->napi, pld_netmem, pld_len, skb, priv);
-            if (unlikely(error != 0)) {
-                page_pool_put_full_netmem(rx_ring->pp, pld_netmem, false);
-                pld_netmem = NULL;
-                netdev_err(priv->ndev, "%s: ring %d failed to append frag",
-                    __func__, rx_ring->index);
-                goto rx_drop;
+
+            //Fill the header field, aka frag[0]
+            __skb_fill_page_desc(skb, 0, hdr_page, rx_info->page_offset, hdr_len + trim);
+            skb_shinfo(skb)->nr_frags = 1;
+            skb->len = hdr_len + trim;
+            skb->data_len = hdr_len + trim;
+            skb->truesize += hdr_len + trim;
+
+            if (cpl->len > hdr_len) {
+                // print_pg(hdr_page, hdr_len);
+                // print_net(pld_netmem, 96);
+                int error = mqnic_skb_append_frag(&cq->napi, pld_netmem, pld_len, skb, priv);
+                if (unlikely(error != 0)) {
+                    page_pool_put_full_netmem(rx_ring->pp, pld_netmem, false);
+                    pld_netmem = NULL;
+                    netdev_err(priv->ndev, "%s: ring %d failed to append frag",
+                        __func__, rx_ring->index);
+                    goto rx_drop;
+                }
             }
         }
+        // stop_time = ktime_get();
+        // elapsed_time = ktime_sub(stop_time, start_time);
+        // avg_proc_time += elapsed_time;
+        // cnt++;
+        // if (cnt >= 10) {
+        //     avg_proc_time /= cnt;
+        //     // pr_debug("Elapsed Time : %lld\n", ktime_to_ns(elapsed_time));
+        //     pr_debug("Average elapsed Time : %d\n", avg_proc_time);
+        //     cnt = 0;
+        //     avg_proc_time = 0;
+        // }
+
         // hand off SKB
         napi_gro_frags(&cq->napi);
 
@@ -606,6 +598,7 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 }
 
 int mqnic_poll_rx_cq(struct napi_struct* napi, int budget) {
+    // pr_debug("%s: IRQ triggered\n", __func__);
     struct mqnic_cq* cq = container_of(napi, struct mqnic_cq, napi);
     int done;
 
@@ -613,9 +606,8 @@ int mqnic_poll_rx_cq(struct napi_struct* napi, int budget) {
     if (done == budget)
         return done;
 
-    napi_complete(napi);
-
-    mqnic_arm_cq(cq);
+    if (napi_complete(napi))
+        mqnic_arm_cq(cq);
 
     return done;
 }
