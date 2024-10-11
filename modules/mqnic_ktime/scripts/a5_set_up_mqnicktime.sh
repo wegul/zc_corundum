@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DIR="/home/weigao/zc_corundum/modules/mqnic"
+DIR="/home/weigao/zc_corundum/modules/mqnic_ktime"
 MK_FLAG=1
 
 echo "sudo rmmod mqnic"
@@ -33,17 +33,16 @@ sudo ip link set dev enp175s0np0 up
 echo "sudo ip addr add 10.0.0.5/24 dev enp175s0np0"
 sudo ip addr add 10.0.0.5/24 dev enp175s0np0
 
-# Port1 is disabled for Atlas5 because it is connected to Tofino.
-# echo "sudo ip link set dev enp175s0np1 up"
-# sudo ip link set dev enp175s0np1 up
+echo "sudo ip link set dev enp175s0np1 up"
+sudo ip link set dev enp175s0np1 up
 
-# echo "sudo ip addr add 10.0.1.5/24 dev enp175s0np1"
-# sudo ip addr add 10.0.1.5/24 dev enp175s0np1
+echo "sudo ip addr add 10.0.1.5/24 dev enp175s0np1"
+sudo ip addr add 10.0.1.5/24 dev enp175s0np1
 
-# echo "sudo arp -s 10.0.0.4 00:0a:35:06:1a:08"
-# sudo arp -s 10.0.0.4 00:0a:35:06:1a:08
+echo "sudo arp -s 10.0.0.4 00:0a:35:06:1a:08"
+sudo arp -s 10.0.0.4 00:0a:35:06:1a:08
 
-# echo "sudo arp -s 10.0.1.4 00:0a:35:06:1a:09"
-# sudo arp -s 10.0.1.4 00:0a:35:06:1a:09
+echo "sudo arp -s 10.0.1.4 00:0a:35:06:1a:09"
+sudo arp -s 10.0.1.4 00:0a:35:06:1a:09
 # sleep 1
 # sudo dmesg -l debug,err,emerg,crit | tail -2000 > ./crash.log
