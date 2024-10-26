@@ -20,8 +20,8 @@ int mqnic_start_port(struct net_device* ndev) {
     int ret;
     u32 desc_block_size;
 
-    netdev_info(ndev, "%s on interface %d netdev %d", __func__,
-        priv->interface->index, priv->index);
+    netdev_info(ndev, "%s on interface %d netdev %d, rxq size= %d", __func__,
+        priv->interface->index, priv->index, priv->rx_ring_size);
 
     netif_set_real_num_tx_queues(ndev, priv->txq_count);
     netif_set_real_num_rx_queues(ndev, priv->rxq_count);
@@ -603,6 +603,7 @@ static int mqnic_rx_queue_start(struct net_device* ndev, void* per_q_mem, int id
     // Obtain the to-be-started rx_queue
     rx_ring = mqnic_create_rx_ring(iface);
     err = hds_mqnic_open_rx_ring(rx_ring, priv, cq, priv->rx_ring_size, 2, idx);
+
     /* Debug: Add the rx queue... */
     struct netdev_rx_queue* rxq = __netif_get_rx_queue(ndev, idx);
     pr_err("%s: the passed-down rxq<%d> has mp_priv=%lx", __func__, idx, rxq->mp_params.mp_priv);
@@ -712,7 +713,6 @@ struct net_device* mqnic_create_netdev(struct mqnic_if* interface, int index,
     struct mqnic_priv* priv;
     int ret = 0;
     int k;
-    u32 desc_block_size;
 
     ndev = alloc_etherdev_mqs(sizeof(*priv), mqnic_res_get_count(interface->txq_res),
         mqnic_res_get_count(interface->rxq_res));
@@ -789,8 +789,6 @@ struct net_device* mqnic_create_netdev(struct mqnic_if* interface, int index,
     priv->hwts_config.flags = 0;
     priv->hwts_config.tx_type = HWTSTAMP_TX_OFF;
     priv->hwts_config.rx_filter = HWTSTAMP_FILTER_NONE;
-
-    desc_block_size = min_t(u32, interface->max_desc_block_size, 4);
 
     priv->rx_queue_map_indir_table_size = interface->rx_queue_map_indir_table_size;
     priv->rx_queue_map_indir_table = kzalloc(sizeof(u32) * priv->rx_queue_map_indir_table_size, GFP_KERNEL);

@@ -64,6 +64,7 @@ struct mqnic_if *mqnic_create_interface(struct mqnic_dev *mdev, int index, u8 __
 	dev_info(dev, "Max TX MTU: %d", interface->max_tx_mtu);
 	dev_info(dev, "Max RX MTU: %d", interface->max_rx_mtu);
 
+
 	interface->eq_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_EQM_TYPE, MQNIC_RB_EQM_VER, 0);
 
 	if (!interface->eq_rb) {

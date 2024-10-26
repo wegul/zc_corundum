@@ -264,7 +264,7 @@ void mqnic_close_rx_ring(struct mqnic_ring* ring) {
 }
 int mqnic_alloc_hdr(struct mqnic_ring* ring, struct page** hdr_page) {
     *hdr_page = dev_alloc_pages(ring->page_order);
-    if (unlikely(!hdr_page)) {
+    if (unlikely(!(*hdr_page))) {
         dev_err(ring->dev, "%s: failed to allocate header memory on interface %d",
             __func__, ring->interface->index);
         return -ENOMEM;
@@ -389,11 +389,12 @@ int mqnic_refill_rx_buffers(struct mqnic_ring* ring) {
     if (missing < 8)
         return 0;
 
-    // pr_debug("%s: replenish %d rx buffer \n", __func__, missing);
     for (; missing-- > 0;) {
         ret = mqnic_prepare_rx_desc(ring, ring->prod_ptr & ring->size_mask);
-        if (ret)
+        if (ret){
+            pr_err("%s: replenish %d rx buffer failed \n", __func__, missing);
             break;
+        }
         ring->prod_ptr++;
     }
 
@@ -461,8 +462,8 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
         }
 
         if (unlikely(!hdr_page)) {
-            netdev_err(priv->ndev, "%s: ring %d null page at index %d",
-                __func__, rx_ring->index, ring_index);
+            netdev_err(priv->ndev, "%s: ring %d null page at index %d; pldnetmem= %x",
+                __func__, rx_ring->index, ring_index, pld_netmem);
             print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
                 cpl, MQNIC_CPL_SIZE, true);
             break;
@@ -513,17 +514,17 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 
             int trim = 0;
             // Hack! modify the header length field here.
-            // if (cpl->len > rx_ring->hdr_len) {
-            //     trim = -12; //12 bytes of option field 66-12=54
-            //     // trim = hack_trim_header(hdr_page, rx_ring->hdr_len);
-            //     pr_err("trim=%d\n", trim);
-            //     // if (trim > 0) {
-            //     //     netdev_warn(priv->ndev, "%s: ring %d dropping LARGE frame (header length %d), trim=%d",
-            //     //         __func__, rx_ring->index, hdr_len, trim);
-            //     //     rx_ring->dropped_packets++;
-            //     //     goto rx_drop;
-            //     // }
-            // }
+            if (cpl->len > rx_ring->hdr_len) {
+                trim = -12; //12 bytes of option field 66-12=54
+                // trim = hack_trim_header(hdr_page, rx_ring->hdr_len);
+                // pr_err("trim=%d\n", trim);
+                // if (trim > 0) {
+                //     netdev_warn(priv->ndev, "%s: ring %d dropping LARGE frame (header length %d), trim=%d",
+                //         __func__, rx_ring->index, hdr_len, trim);
+                //     rx_ring->dropped_packets++;
+                //     goto rx_drop;
+                // }
+            }
 
             //Fill the header field, aka frag[0]
             __skb_fill_page_desc(skb, 0, hdr_page, rx_info->page_offset, hdr_len + trim);

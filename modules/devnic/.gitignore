@@ -9,3 +9,5 @@ modules.order
 Module.symvers
 
 *.sh
+
+*.data
