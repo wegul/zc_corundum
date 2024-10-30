@@ -51,6 +51,7 @@ int hds_mqnic_open_rx_ring(struct mqnic_ring* ring, struct mqnic_priv* priv,
     pp_params.nid = NUMA_NO_NODE;
     pp_params.dev = priv->dev;
     pp_params.netdev = priv->ndev;
+    // Means pages are automatically given a dma_addr
     pp_params.flags = PP_FLAG_DMA_MAP;
     pp_params.dma_dir = DMA_FROM_DEVICE;
     pp_params.queue = NULL;
@@ -290,8 +291,6 @@ void mqnic_free_rx_desc(struct mqnic_ring* ring, int index) {
 
     dma_unmap_page(ring->dev, dma_unmap_addr(rx_info, hdr_dma_addr),
         dma_unmap_len(rx_info, hdr_len), DMA_FROM_DEVICE);
-    // dma_unmap_page(ring->dev, dma_unmap_addr(rx_info, pld_dma_addr),
-    // 	dma_unmap_len(rx_info, pld_len), DMA_FROM_DEVICE);
     rx_info->hdr_dma_addr = 0;
     rx_info->pld_dma_addr = 0;
     __free_pages(rx_info->hdr_page, rx_info->page_order);
@@ -368,7 +367,6 @@ int mqnic_prepare_rx_desc(struct mqnic_ring* ring, int index) {
     rx_desc[1].len = cpu_to_le32(pld_len);
     rx_desc[1].addr = cpu_to_le64(pld_dma_addr);
 
-
     // update rx_info
     rx_info->page_order = page_order;
     rx_info->page_offset = 0;
@@ -428,7 +426,6 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
     int done = 0;
     int budget = napi_budget;
     u16 hdr_len, pld_len;
-    // ktime_t start_time, stop_time, elapsed_time;// measure critical section...
 
     if (unlikely(!priv || !priv->port_up))
         return done;
@@ -489,7 +486,7 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
         }
 
         // SKB handling: we should have a small copied header and attach a netmem as a frag
-        skb = mqnic_skb_copy_header(priv->ndev, &cq->napi, hdr_page, hdr_len+trim);
+        skb = mqnic_skb_copy_header(priv->ndev, &cq->napi, hdr_page, hdr_len + trim);
         if (unlikely(!skb)) {
             netdev_err(priv->ndev, "%s: ring %d failed to allocate skb",
                 __func__, rx_ring->index);
@@ -528,9 +525,10 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
 
     rx_drop:
         done++;
-
         cq_cons_ptr++;
         cq_index = cq_cons_ptr & cq->size_mask;
+        //Free up the header data, because it is copied.
+        __free_pages(hdr_page, rx_info->page_order);
     }
 
     // update CQ consumer pointer
