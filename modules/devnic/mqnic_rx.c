@@ -391,7 +391,7 @@ int mqnic_refill_rx_buffers(struct mqnic_ring* ring) {
 
     for (; missing-- > 0;) {
         ret = mqnic_prepare_rx_desc(ring, ring->prod_ptr & ring->size_mask);
-        if (ret){
+        if (ret) {
             pr_err("%s: replenish %d rx buffer failed \n", __func__, missing);
             break;
         }
@@ -410,7 +410,6 @@ int mqnic_refill_rx_buffers(struct mqnic_ring* ring) {
 
     return ret;
 }
-static int avg_proc_time = 0, cnt = 0;//sample every 10 packet
 
 int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
     struct mqnic_if* interface = cq->interface;
@@ -469,21 +468,38 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
             break;
         }
 
-        // skb = mqnic_skb_copy_header(priv->ndev, &cq->napi, hdr_page, 128);
-        skb = napi_get_frags(&cq->napi);
+        /* Unmap is purposed to prevent data in buf being overwritten.
+                      However, in a recyclable system, it is not possible to double-access buf. So maybe cancel this op.
+                      */
+        dma_unmap_page(dev, dma_unmap_addr(rx_info, hdr_dma_addr),
+            dma_unmap_len(rx_info, hdr_len), DMA_FROM_DEVICE);
+        dma_sync_single_range_for_cpu(dev, rx_info->hdr_dma_addr, rx_info->page_offset,
+            hdr_len, DMA_FROM_DEVICE);
+        dma_sync_single_for_cpu(dev, rx_info->pld_dma_addr, pld_len, DMA_FROM_DEVICE);
+        rx_info->hdr_dma_addr = 0;
+        rx_info->pld_dma_addr = 0;
+        // Clear refcnt. (Q: Actually is it better to rely on page->refcnt?)
+        rx_info->hdr_page = NULL;
+        rx_info->pld_netmem = NULL;
+
+        int trim = 0;
+        // Hack! modify the header length field here.
+        if (cpl->len > rx_ring->hdr_len) {
+            trim = -12; //12 bytes of option field 66-12=54
+        }
+
+        // SKB handling: we should have a small copied header and attach a netmem as a frag
+        skb = mqnic_skb_copy_header(priv->ndev, &cq->napi, hdr_page, hdr_len+trim);
         if (unlikely(!skb)) {
             netdev_err(priv->ndev, "%s: ring %d failed to allocate skb",
                 __func__, rx_ring->index);
             break;
         }
         skb_mark_for_recycle(skb);
-
+        skb_record_rx_queue(skb, rx_ring->index);
         // RX hardware timestamp
         if (interface->if_features & MQNIC_IF_FEATURE_PTP_TS)
             skb_hwtstamps(skb)->hwtstamp = mqnic_read_cpl_ts(interface->mdev, rx_ring, cpl);
-
-        skb_record_rx_queue(skb, rx_ring->index);
-
         // RX hardware checksum
         if (priv->ndev->features & NETIF_F_RXCSUM) {
             skb->csum = csum_unfold((__sum16)cpu_to_be16(le16_to_cpu(cpl->rx_csum)));
@@ -494,72 +510,18 @@ int mqnic_process_rx_cq(struct mqnic_cq* cq, int napi_budget) {
             skb->ip_summed = CHECKSUM_UNNECESSARY;
         }
 
-        // start_time = ktime_get();
-        //measuring zone
-        {
-            /* Unmap is purposed to prevent data in buf being overwritten.
-                  However, in a recyclable system, it is not possible to double-access buf. So maybe cancel this op.
-                  */
-            dma_unmap_page(dev, dma_unmap_addr(rx_info, hdr_dma_addr),
-                dma_unmap_len(rx_info, hdr_len), DMA_FROM_DEVICE);
-            dma_sync_single_range_for_cpu(dev, rx_info->hdr_dma_addr, rx_info->page_offset,
-                hdr_len, DMA_FROM_DEVICE);
-            dma_sync_single_for_cpu(dev, rx_info->pld_dma_addr, pld_len, DMA_FROM_DEVICE);
-
-            rx_info->hdr_dma_addr = 0;
-            rx_info->pld_dma_addr = 0;
-            // Clear refcnt. (Q: Actually is it better to rely on page->refcnt?)
-            rx_info->hdr_page = NULL;
-            rx_info->pld_netmem = NULL;
-
-            int trim = 0;
-            // Hack! modify the header length field here.
-            if (cpl->len > rx_ring->hdr_len) {
-                trim = -12; //12 bytes of option field 66-12=54
-                // trim = hack_trim_header(hdr_page, rx_ring->hdr_len);
-                // pr_err("trim=%d\n", trim);
-                // if (trim > 0) {
-                //     netdev_warn(priv->ndev, "%s: ring %d dropping LARGE frame (header length %d), trim=%d",
-                //         __func__, rx_ring->index, hdr_len, trim);
-                //     rx_ring->dropped_packets++;
-                //     goto rx_drop;
-                // }
-            }
-
-            //Fill the header field, aka frag[0]
-            __skb_fill_page_desc(skb, 0, hdr_page, rx_info->page_offset, hdr_len + trim);
-            skb_shinfo(skb)->nr_frags = 1;
-            skb->len = hdr_len + trim;
-            skb->data_len = hdr_len + trim;
-            skb->truesize += hdr_len + trim;
-
-            if (cpl->len > hdr_len) {
-                // print_pg(hdr_page, hdr_len);
-                // print_net(pld_netmem, 96);
-                int error = mqnic_skb_append_frag(&cq->napi, pld_netmem, pld_len, skb, priv);
-                if (unlikely(error != 0)) {
-                    page_pool_put_full_netmem(rx_ring->pp, pld_netmem, false);
-                    pld_netmem = NULL;
-                    netdev_err(priv->ndev, "%s: ring %d failed to append frag",
-                        __func__, rx_ring->index);
-                    goto rx_drop;
-                }
+        if (cpl->len > hdr_len) {
+            int error = mqnic_skb_append_frag(&cq->napi, pld_netmem, pld_len, skb, priv);
+            if (unlikely(error != 0)) {
+                page_pool_put_full_netmem(rx_ring->pp, pld_netmem, false);
+                pld_netmem = NULL;
+                netdev_err(priv->ndev, "%s: ring %d failed to append frag",
+                    __func__, rx_ring->index);
+                goto rx_drop;
             }
         }
-        // stop_time = ktime_get();
-        // elapsed_time = ktime_sub(stop_time, start_time);
-        // avg_proc_time += elapsed_time;
-        // cnt++;
-        // if (cnt >= 10) {
-        //     avg_proc_time /= cnt;
-        //     // pr_debug("Elapsed Time : %lld\n", ktime_to_ns(elapsed_time));
-        //     pr_debug("Average elapsed Time : %d\n", avg_proc_time);
-        //     cnt = 0;
-        //     avg_proc_time = 0;
-        // }
-
         // hand off SKB
-        napi_gro_frags(&cq->napi);
+        napi_gro_receive(&cq->napi, skb);
 
         rx_ring->packets++;
         rx_ring->bytes += le16_to_cpu(cpl->len);
@@ -622,7 +584,6 @@ struct sk_buff* mqnic_skb_copy_header(struct net_device* dev, struct napi_struct
     if (unlikely(!page)) {
         return NULL;
     }
-    pr_info("Build SKB!!");
     skb_copy_to_linear_data_offset(skb, 0, page_address(page), len);
     skb->protocol = eth_type_trans(skb, dev);
 
