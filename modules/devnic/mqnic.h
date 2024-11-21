@@ -227,9 +227,8 @@ struct mqnic_tx_info {
 
 struct mqnic_rx_info {
     netmem_ref pld_netmem; // This is a (void*) pointer, it contains 64bit address!
-    struct page* hdr_page;
-    u32 page_order;
-    u32 page_offset;
+    u8* hdr_buf;
+    // u32 page_offset;
     dma_addr_t pld_dma_addr;
     u32 pld_len;
     dma_addr_t hdr_dma_addr;
@@ -269,7 +268,11 @@ struct mqnic_ring {
     dma_addr_t buf_dma_addr;
 
     /*HDS: below is coherent header buf*/
-    u16 hdr_len;//fixed 66B (Eth+IP+TCP)
+    u32 hdr_len;//fixed 66B (Eth+IP+TCP)
+    u32 hdr_buf_len; // hdr_len round up to powof2.
+    u8* hdr_bufs_cpu;//This is a contiguous buf for header data
+    dma_addr_t hdr_bufs_dma;
+
 
     union {
         struct mqnic_tx_info* tx_info;
@@ -610,8 +613,7 @@ void mqnic_process_eq(struct mqnic_eq* eq);
 // mqnic_cq.c
 struct mqnic_cq* mqnic_create_cq(struct mqnic_if* interface);
 void mqnic_destroy_cq(struct mqnic_cq* cq);
-int hds_mqnic_open_cq(struct mqnic_cq* cq, struct mqnic_eq* eq, int size, int rxq_idx);
-int mqnic_open_cq(struct mqnic_cq* cq, struct mqnic_eq* eq, int size);
+int mqnic_open_cq(struct mqnic_cq* cq, struct mqnic_eq* eq, int size, int rxq_idx);
 void mqnic_close_cq(struct mqnic_cq* cq);
 void mqnic_cq_read_prod_ptr(struct mqnic_cq* cq);
 void mqnic_cq_write_cons_ptr(struct mqnic_cq* cq);
@@ -640,10 +642,8 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff* skb, struct net_device* dev);
 // mqnic_rx.c
 struct mqnic_ring* mqnic_create_rx_ring(struct mqnic_if* interface);
 void mqnic_destroy_rx_ring(struct mqnic_ring* ring);
-int hds_mqnic_open_rx_ring(struct mqnic_ring* ring, struct mqnic_priv* priv,
-    struct mqnic_cq* cq, int size, int desc_block_size, int rxq_idx);
 int mqnic_open_rx_ring(struct mqnic_ring* ring, struct mqnic_priv* priv,
-    struct mqnic_cq* cq, int size, int desc_block_size);
+    struct mqnic_cq* cq, int size, int desc_block_size, int rxq_idx);
 void mqnic_close_rx_ring(struct mqnic_ring* ring);
 int mqnic_enable_rx_ring(struct mqnic_ring* ring);
 void mqnic_disable_rx_ring(struct mqnic_ring* ring);
@@ -651,6 +651,8 @@ bool mqnic_is_rx_ring_empty(const struct mqnic_ring* ring);
 bool mqnic_is_rx_ring_full(const struct mqnic_ring* ring);
 void mqnic_rx_read_cons_ptr(struct mqnic_ring* ring);
 void mqnic_rx_write_prod_ptr(struct mqnic_ring* ring);
+int mqnic_alloc_hdr(struct mqnic_ring* ring);
+int mqnic_alloc_pld(struct mqnic_ring* ring, netmem_ref* netmemp);
 void mqnic_free_rx_desc(struct mqnic_ring* ring, int index);
 int mqnic_free_rx_buf(struct mqnic_ring* ring);
 int mqnic_prepare_rx_desc(struct mqnic_ring* ring, int index);
@@ -662,7 +664,7 @@ int mqnic_poll_rx_cq(struct napi_struct* napi, int budget);
 #define HW_HDR_SIZE 66
 int hack_trim_header(struct page* hdr_page, u16 hw_hdr_len);
 struct sk_buff* mqnic_skb_copy_header(struct net_device* dev, struct napi_struct* napi,
-    struct page* page, u16 len);
+    u8* buf, u16 len);
 int mqnic_skb_append_frag(struct napi_struct* napi, netmem_ref pld_netmem, u16 pld_len,
     struct sk_buff* skb, struct mqnic_priv* priv);
 

@@ -38,6 +38,9 @@ sudo ip link set dev enp175s0np1 up
 echo "sudo ip addr add 10.0.1.4/24 dev enp175s0np1"
 sudo ip addr add 10.0.1.4/24 dev enp175s0np1
 
+echo "sudo ip link set dev enp175s0np1 mtu 4096"
+sudo ip link set dev enp175s0np1 mtu 4096
+
 # echo "sudo ethtool -X enp175s0np0 equal 1"
 # sudo ethtool -X enp175s0np0 equal 1
 

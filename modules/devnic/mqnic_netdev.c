@@ -37,7 +37,7 @@ int mqnic_start_port(struct net_device* ndev) {
             goto fail;
         }
 
-        ret = mqnic_open_cq(cq, iface->eq[k % iface->eq_count], priv->rx_ring_size);
+        ret = mqnic_open_cq(cq, iface->eq[k % iface->eq_count], priv->rx_ring_size,-1);
         if (ret) {
             mqnic_destroy_cq(cq);
             goto fail;
@@ -64,7 +64,7 @@ int mqnic_start_port(struct net_device* ndev) {
             q->page_order = ilog2((ndev->mtu + ETH_HLEN + PAGE_SIZE - 1) / PAGE_SIZE - 1) + 1;
 
         //Desc_block_size=2, means we have 2 descs per stride, one kernel, one user.
-        ret = mqnic_open_rx_ring(q, priv, cq, priv->rx_ring_size, 2);
+        ret = mqnic_open_rx_ring(q, priv, cq, priv->rx_ring_size, 2, -1/*default rxqid*/);
         if (ret) {
             mqnic_destroy_rx_ring(q);
             mqnic_destroy_cq(cq);
@@ -90,7 +90,7 @@ int mqnic_start_port(struct net_device* ndev) {
             goto fail;
         }
 
-        ret = mqnic_open_cq(cq, iface->eq[k % iface->eq_count], priv->tx_ring_size);
+        ret = mqnic_open_cq(cq, iface->eq[k % iface->eq_count], priv->tx_ring_size,-1);
         if (ret) {
             mqnic_destroy_cq(cq);
             goto fail;
@@ -595,18 +595,18 @@ static int mqnic_rx_queue_start(struct net_device* ndev, void* per_q_mem, int id
 
     /* 1.1 allocate CQ and rx_ring*/
     cq = mqnic_create_cq(iface);
-    err = hds_mqnic_open_cq(cq, iface->eq[idx % iface->eq_count], priv->rx_ring_size, idx);
+    err = mqnic_open_cq(cq, iface->eq[idx % iface->eq_count], priv->rx_ring_size, idx);
     netif_napi_add(ndev, &cq->napi, mqnic_poll_rx_cq);
     napi_enable(&cq->napi);
     mqnic_arm_cq(cq);
     /* 1.2 rx_ring Allocate buffers and post descs */
     // Obtain the to-be-started rx_queue
     rx_ring = mqnic_create_rx_ring(iface);
-    err = hds_mqnic_open_rx_ring(rx_ring, priv, cq, priv->rx_ring_size, 2, idx);
+    err = mqnic_open_rx_ring(rx_ring, priv, cq, priv->rx_ring_size, 2, idx);
 
     /* Debug: Add the rx queue... */
     struct netdev_rx_queue* rxq = __netif_get_rx_queue(ndev, idx);
-    pr_err("%s: the passed-down rxq<%d> has mp_priv=%lx", __func__, idx, rxq->mp_params.mp_priv);
+    pr_err("%s: the passed-down rxq<%d> has mp_priv=%px", __func__, idx, rxq->mp_params.mp_priv);
     // 2. Add to priv
     down_write(&priv->rxq_table_sem);
     err = radix_tree_insert(&priv->rxq_table, idx, rx_ring);
@@ -637,7 +637,6 @@ static int mqnic_rx_queue_stop(struct net_device* ndev, void* per_q_mem, int idx
     struct mqnic_ring* target_ring;
     struct mqnic_cq* target_cq;
     struct mqnic_priv* priv = netdev_priv(ndev);
-    struct mqnic_if* iface = priv->interface;
 
     // // 1. Turn down all queues (diable napi).
     // // mqnic_turndown(priv);
