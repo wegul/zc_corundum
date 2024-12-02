@@ -4,9 +4,7 @@
  */
 
 #include "mqnic.h"
- // #include "debug.h"
 
- //Override
 int mqnic_open_rx_ring(struct mqnic_ring* ring, struct mqnic_priv* priv,
     struct mqnic_cq* cq, int size, int desc_block_size, int rxq_idx) {
     int ret = 0;
@@ -56,30 +54,23 @@ int mqnic_open_rx_ring(struct mqnic_ring* ring, struct mqnic_priv* priv,
     }
 
     struct page_pool_params pp_params = { 0 };
-    /*
-    Create a page_pool and register it with rxq
-    netdev and queue are devmemtcp features
-    */
+    // The flags mean pages are automatically given a dma_addr
+    pp_params.flags = PP_FLAG_DMA_MAP | PP_FLAG_ALLOW_UNREADABLE_NETMEM;
     pp_params.order = ring->page_order;
     pp_params.pool_size = ring->size;
-    pp_params.nid = NUMA_NO_NODE;
     pp_params.dev = priv->dev;
     pp_params.netdev = priv->ndev;
-    // Means pages are automatically given a dma_addr
-    pp_params.flags = PP_FLAG_DMA_MAP;
+    pp_params.napi = &cq->napi;
+    pp_params.max_len = PAGE_SIZE;
     pp_params.dma_dir = DMA_FROM_DEVICE;
-    pp_params.queue = NULL;
-    pp_params.queue = __netif_get_rx_queue(priv->ndev, ring->index);
+    pp_params.queue_idx = ring->index;
     ring->pp = page_pool_create(&pp_params);
-    {
-        struct page_pool* pp = ring->pp;
-        if (pp->mp_priv) {
-            pr_debug("%s: We actually successfully bound dmabuf in ring<%d> of IF<%d>\n", __func__, ring->index, priv->interface->index);
-        }
-        else {
-            pr_debug("%s: Kernel page in ring<%d>\n", __func__, ring->index);
-        }
+
+    struct page_pool* pp = ring->pp;
+    if (pp->mp_priv) {
+        pr_debug("%s: Bound dmabuf in ring<%d> of IF<%d>\n", __func__, ring->index, priv->interface->index);
     }
+
     ring->priv = priv;
     ring->cq = cq;
     cq->src_ring = ring;
@@ -120,6 +111,7 @@ int mqnic_open_rx_ring(struct mqnic_ring* ring, struct mqnic_priv* priv,
 
         goto fail;
     }
+
 
     return 0;
 

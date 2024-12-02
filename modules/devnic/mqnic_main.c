@@ -832,7 +832,7 @@ fail:
     return ret;
 }
 
-static int mqnic_platform_remove(struct platform_device* pdev) {
+static void mqnic_platform_remove(struct platform_device* pdev) {
     struct mqnic_dev* mqnic = platform_get_drvdata(pdev);
     struct devlink* devlink = priv_to_devlink(mqnic);
 
@@ -842,7 +842,6 @@ static int mqnic_platform_remove(struct platform_device* pdev) {
 
     mqnic_free_id(mqnic);
     mqnic_devlink_free(devlink);
-    return 0;
 }
 
 static struct platform_driver mqnic_platform_driver = {
