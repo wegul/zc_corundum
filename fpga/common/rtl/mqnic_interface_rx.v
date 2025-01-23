@@ -5,9 +5,7 @@
 
 // Language: Verilog 2001
 
-`resetall 
-`timescale 1ns / 1ps 
-`default_nettype none
+`resetall `timescale 1ns / 1ps `default_nettype none
 
 /*
  * NIC Interface RX path
@@ -568,6 +566,98 @@ module mqnic_interface_rx #(
   wire [      AXIS_RX_ID_WIDTH-1:0] rx_axis_tid_int;
   wire [    AXIS_RX_DEST_WIDTH-1:0] rx_axis_tdest_int;
   wire [INT_AXIS_RX_USER_WIDTH-1:0] rx_axis_tuser_int;
+
+  axis_async_fifo #(
+      .DEPTH(1024),
+      .DATA_WIDTH(AXIS_DATA_WIDTH),
+      .KEEP_ENABLE(1),
+      .LAST_ENABLE(1),
+      .ID_ENABLE(0),
+      .DEST_ENABLE(0),
+      .USER_ENABLE(0),
+      .RAM_PIPELINE(2),
+      .DROP_WHEN_FULL(1),
+      .FRAME_FIFO(1)
+  ) ids_fifo_out (  // AXI input
+      .s_clk(clk),
+      .s_rst(rst),
+      .s_axis_tdata(s_axis_rx_tdata_from_ids),
+      .s_axis_tkeep(0),
+      .s_axis_tvalid(s_axis_rx_tvalid_from_ids),
+      .s_axis_tready(s_axis_rx_tready_from_ids),
+      .s_axis_tlast(s_axis_rx_tlast_from_ids),
+      .s_axis_tid(0),
+      .s_axis_tdest(0),
+      .s_axis_tuser(0),
+
+      // AXI output
+      .m_clk(clk),
+      .m_rst(clk),
+      .m_axis_tdata(m_axis_rx_tdata_to_dma),
+      .m_axis_tkeep(),
+      .m_axis_tvalid(m_axis_rx_tvalid_to_dma),
+      .m_axis_tready(m_axis_rx_tready_to_dma),
+      .m_axis_tlast(m_axis_rx_tlast_to_dma),
+      .m_axis_tid(m_axis_rx_tid_to_dma),
+      .m_axis_tdest(),
+      .m_axis_tuser(),
+
+      // Status
+      .s_status_overflow  (),
+      .s_status_bad_frame (),
+      .s_status_good_frame(),
+      .m_status_overflow  (),
+      .m_status_bad_frame (),
+      .m_status_good_frame()
+  );
+  // ******************************************
+  // Add IDS module here
+  // FIFO_IN -- m_axis_* --> IDS --> s_axis_* --> FIFO_OUT
+  // ******************************************
+
+  axis_async_fifo #(
+      .DEPTH(1024),
+      .DATA_WIDTH(AXIS_DATA_WIDTH),
+      .KEEP_ENABLE(1),
+      .LAST_ENABLE(1),
+      .ID_ENABLE(0),
+      .DEST_ENABLE(0),
+      .USER_ENABLE(0),
+      .RAM_PIPELINE(2),
+      .DROP_WHEN_FULL(1),
+      .FRAME_FIFO(1)
+  ) ids_fifo_in (  // AXI input
+      .s_clk(clk),
+      .s_rst(rst),
+      .s_axis_tdata(s_axis_rx_tdata_from_input),
+      .s_axis_tkeep(0),
+      .s_axis_tvalid(s_axis_rx_tvalid_from_input),
+      .s_axis_tready(s_axis_rx_tready_from_input),
+      .s_axis_tlast(s_axis_rx_tlast_from_input),
+      .s_axis_tid(tx_axis_ptp_ts_tag),
+      .s_axis_tdest(0),
+      .s_axis_tuser(0),
+
+      // AXI output
+      .m_clk(clk),
+      .m_rst(clk),
+      .m_axis_tdata(m_axis_rx_tdata_to_ids),
+      .m_axis_tkeep(),
+      .m_axis_tvalid(m_axis_rx_tvalid_to_ids),
+      .m_axis_tready(m_axis_rx_tready_to_ids),
+      .m_axis_tlast(m_axis_rx_tlast_to_ids),
+      .m_axis_tid(m_axis_rx_tid_to_ids),
+      .m_axis_tdest(),
+      .m_axis_tuser(),
+
+      // Status
+      .s_status_overflow  (),
+      .s_status_bad_frame (),
+      .s_status_good_frame(),
+      .m_status_overflow  (),
+      .m_status_bad_frame (),
+      .m_status_good_frame()
+  );
 
   mqnic_ingress #(
       .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
