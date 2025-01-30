@@ -114,6 +114,10 @@ SYN_FILES += lib/pcie/rtl/pcie_us_if_cq.v
 SYN_FILES += lib/pcie/rtl/pcie_us_cfg.v
 SYN_FILES += lib/pcie/rtl/pulse_merge.v
 
+#SYN_FILES += $(find rtl/common/full_matcher/src/)
+SYN_FILES += $(foreach p,$(ls ../rtl/common/full_matcher/src/),rtl/common/full_matcher/src/$p)
+SYN_FILES += $(foreach p,$(ls ../rtl/common/full_matcher/src/nfa_table/),rtl/common/full_matcher/src/nfa_table/$p)
+
 # XDC files
 XDC_FILES = fpga_au200.xdc
 XDC_FILES += placement_au200.xdc

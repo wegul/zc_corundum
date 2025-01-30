@@ -6,6 +6,7 @@
 // Language: Verilog 2001
 
 `resetall `timescale 1ns / 1ps `default_nettype none
+`include "full_matcher/src/full_matcher_if.sv"
 
 /*
  * NIC Interface RX path
@@ -567,6 +568,30 @@ module mqnic_interface_rx #(
   wire [    AXIS_RX_DEST_WIDTH-1:0] rx_axis_tdest_int;
   wire [INT_AXIS_RX_USER_WIDTH-1:0] rx_axis_tuser_int;
 
+  wire [       AXIS_DATA_WIDTH-1:0] s_axis_rx_tdata_from_ids;
+  wire                              s_axis_rx_tvalid_from_ids;
+  wire                              s_axis_rx_tready_from_ids;
+  wire                              s_axis_rx_tlast_from_ids;
+
+  wire [       AXIS_DATA_WIDTH-1:0] m_axis_rx_tdata_to_dma;
+  wire                              m_axis_rx_tvalid_to_dma;
+  wire                              m_axis_rx_tready_to_dma;
+  wire                              m_axis_rx_tlast_to_dma;
+  wire                              m_axis_rx_tid_to_dma;
+
+  wire [       AXIS_DATA_WIDTH-1:0] s_axis_rx_tdata_from_input;
+  wire                              s_axis_rx_tvalid_from_input;
+  wire                              s_axis_rx_tready_from_input;
+  wire                              s_axis_rx_tlast_from_input;
+
+  wire [       AXIS_DATA_WIDTH-1:0] m_axis_rx_tdata_to_ids;
+  wire                              m_axis_rx_tvalid_to_ids;
+  wire                              m_axis_rx_tready_to_ids;
+  wire                              m_axis_rx_tlast_to_ids;
+  wire                              m_axis_rx_tid_to_ids;
+
+  wire tx_axis_ptp_ts_tag;
+
   axis_async_fifo #(
       .DEPTH(1024),
       .DATA_WIDTH(AXIS_DATA_WIDTH),
@@ -610,10 +635,18 @@ module mqnic_interface_rx #(
       .m_status_bad_frame (),
       .m_status_good_frame()
   );
+
   // ******************************************
   // Add IDS module here
   // FIFO_IN -- m_axis_* --> IDS --> s_axis_* --> FIFO_OUT
   // ******************************************
+
+  
+  full_matcher_if fif();
+
+  axi_fifo_rx #(.DATA_WIDTH(AXIS_DATA_WIDTH)) fm_rx(clk, clk, rst, m_axis_rx_tdata_to_ids, m_axis_rx_tvalid_to_ids, m_axis_rx_tlast_to_ids, m_axis_rx_tready_to_ids, fif);
+  full_matcher f_m(clk, ~rst, fif);
+  axi_fifo_tx #(.DATA_WIDTH(AXIS_DATA_WIDTH)) fm_tx(clk, rst, s_axis_rx_tdata_from_ids, s_axis_rx_tvalid_from_ids, s_axis_rx_tlast_from_ids, fif);
 
   axis_async_fifo #(
       .DEPTH(1024),
