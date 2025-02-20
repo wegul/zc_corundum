@@ -585,6 +585,7 @@ module mqnic_interface_rx #(
   wire                              s_axis_rx_tlast_from_input;
 
   wire [       AXIS_DATA_WIDTH-1:0] m_axis_rx_tdata_to_ids;
+  wire [       AXIS_KEEP_WIDTH-1:0] m_axis_rx_tkeep_to_ids;
   wire                              m_axis_rx_tvalid_to_ids;
   wire                              m_axis_rx_tready_to_ids;
   wire                              m_axis_rx_tlast_to_ids;
@@ -644,7 +645,7 @@ module mqnic_interface_rx #(
   
   full_matcher_if fif();
 
-  axi_fifo_rx #(.DATA_WIDTH(AXIS_DATA_WIDTH)) fm_rx(clk, clk, rst, m_axis_rx_tdata_to_ids, m_axis_rx_tvalid_to_ids, m_axis_rx_tlast_to_ids, m_axis_rx_tready_to_ids, fif);
+  axi_fifo_rx #(.DATA_WIDTH(AXIS_DATA_WIDTH)) fm_rx(clk, clk, rst, m_axis_rx_tdata_to_ids, m_axis_rx_tvalid_to_ids, m_axis_rx_tkeep_to_ids, m_axis_rx_tlast_to_ids, m_axis_rx_tready_to_ids, fif);
   full_matcher f_m(clk, ~rst, fif);
   axi_fifo_tx #(.DATA_WIDTH(AXIS_DATA_WIDTH)) fm_tx(clk, rst, s_axis_rx_tdata_from_ids, s_axis_rx_tvalid_from_ids, s_axis_rx_tlast_from_ids, fif);
 
@@ -675,7 +676,7 @@ module mqnic_interface_rx #(
       .m_clk(clk),
       .m_rst(clk),
       .m_axis_tdata(m_axis_rx_tdata_to_ids),
-      .m_axis_tkeep(),
+      .m_axis_tkeep(m_axis_rx_tkeep_to_ids),
       .m_axis_tvalid(m_axis_rx_tvalid_to_ids),
       .m_axis_tready(m_axis_rx_tready_to_ids),
       .m_axis_tlast(m_axis_rx_tlast_to_ids),
