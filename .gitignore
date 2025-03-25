@@ -31,6 +31,9 @@ modules.order
 **/fpga.runs/*
 **/fpga.srcs/*
 **/fpga.hw/*
+**/fpga.sim/*
+**/fpga.ip_user_files/*
+
 
 # ILA log file
 *.csv

@@ -17,7 +17,7 @@ SYN_FILES += rtl/common/mqnic_core.v
 SYN_FILES += rtl/common/mqnic_dram_if.v
 SYN_FILES += rtl/common/mqnic_interface.v
 SYN_FILES += rtl/common/mqnic_interface_tx.v
-SYN_FILES += rtl/common/mqnic_interface_rx.v
+SYN_FILES += rtl/common/mqnic_interface_rx.sv
 SYN_FILES += rtl/common/mqnic_port.v
 SYN_FILES += rtl/common/mqnic_port_tx.v
 SYN_FILES += rtl/common/mqnic_port_rx.v
@@ -115,8 +115,10 @@ SYN_FILES += lib/pcie/rtl/pcie_us_cfg.v
 SYN_FILES += lib/pcie/rtl/pulse_merge.v
 
 #SYN_FILES += $(find rtl/common/full_matcher/src/)
-SYN_FILES += $(foreach p,$(ls ../rtl/common/full_matcher/src/),rtl/common/full_matcher/src/$p)
-SYN_FILES += $(foreach p,$(ls ../rtl/common/full_matcher/src/nfa_table/),rtl/common/full_matcher/src/nfa_table/$p)
+SYN_FILES += $(wildcard rtl/common/full_matcher/src/nfa_table/*)
+SYN_FILES += $(wildcard rtl/common/full_matcher/src/*)
+
+
 
 # XDC files
 XDC_FILES = fpga_au200.xdc

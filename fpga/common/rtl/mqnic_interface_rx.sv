@@ -6,7 +6,9 @@
 // Language: Verilog 2001
 
 `resetall `timescale 1ns / 1ps `default_nettype none
-`include "full_matcher/src/full_matcher_if.sv"
+// `include "full_matcher/src/full_matcher_if.sv"
+
+
 
 /*
  * NIC Interface RX path
@@ -568,30 +570,35 @@ module mqnic_interface_rx #(
   wire [    AXIS_RX_DEST_WIDTH-1:0] rx_axis_tdest_int;
   wire [INT_AXIS_RX_USER_WIDTH-1:0] rx_axis_tuser_int;
 
+  // IDS connection definition
   wire [       AXIS_DATA_WIDTH-1:0] s_axis_rx_tdata_from_ids;
+  wire [       AXIS_KEEP_WIDTH-1:0] s_axis_rx_tkeep_from_ids;
   wire                              s_axis_rx_tvalid_from_ids;
   wire                              s_axis_rx_tready_from_ids;
   wire                              s_axis_rx_tlast_from_ids;
 
   wire [       AXIS_DATA_WIDTH-1:0] m_axis_rx_tdata_to_dma;
+  wire [       AXIS_KEEP_WIDTH-1:0] m_axis_rx_tkeep_to_dma;
   wire                              m_axis_rx_tvalid_to_dma;
   wire                              m_axis_rx_tready_to_dma;
   wire                              m_axis_rx_tlast_to_dma;
-  wire                              m_axis_rx_tid_to_dma;
+  wire [      AXIS_RX_ID_WIDTH-1:0] m_axis_rx_tid_to_dma;
 
-  wire [       AXIS_DATA_WIDTH-1:0] s_axis_rx_tdata_from_input;
-  wire                              s_axis_rx_tvalid_from_input;
-  wire                              s_axis_rx_tready_from_input;
-  wire                              s_axis_rx_tlast_from_input;
+  wire [       AXIS_DATA_WIDTH-1:0] s_axis_rx_tdata_from_ingress;
+  wire [       AXIS_KEEP_WIDTH-1:0] s_axis_rx_tkeep_from_ingress;
+  wire                              s_axis_rx_tvalid_from_ingress;
+  wire                              s_axis_rx_tready_from_ingress;
+  wire                              s_axis_rx_tlast_from_ingress;
 
   wire [       AXIS_DATA_WIDTH-1:0] m_axis_rx_tdata_to_ids;
   wire [       AXIS_KEEP_WIDTH-1:0] m_axis_rx_tkeep_to_ids;
   wire                              m_axis_rx_tvalid_to_ids;
   wire                              m_axis_rx_tready_to_ids;
   wire                              m_axis_rx_tlast_to_ids;
-  wire                              m_axis_rx_tid_to_ids;
+  wire [      AXIS_RX_ID_WIDTH-1:0] m_axis_rx_tid_to_ids;
 
-  wire tx_axis_ptp_ts_tag;
+  wire                              tx_axis_ptp_ts_tag;
+
 
   axis_async_fifo #(
       .DEPTH(1024),
@@ -608,7 +615,7 @@ module mqnic_interface_rx #(
       .s_clk(clk),
       .s_rst(rst),
       .s_axis_tdata(s_axis_rx_tdata_from_ids),
-      .s_axis_tkeep(0),
+      .s_axis_tkeep(s_axis_rx_tkeep_from_ids),
       .s_axis_tvalid(s_axis_rx_tvalid_from_ids),
       .s_axis_tready(s_axis_rx_tready_from_ids),
       .s_axis_tlast(s_axis_rx_tlast_from_ids),
@@ -618,9 +625,9 @@ module mqnic_interface_rx #(
 
       // AXI output
       .m_clk(clk),
-      .m_rst(clk),
+      .m_rst(rst),
       .m_axis_tdata(m_axis_rx_tdata_to_dma),
-      .m_axis_tkeep(),
+      .m_axis_tkeep(m_axis_rx_tkeep_to_dma),
       .m_axis_tvalid(m_axis_rx_tvalid_to_dma),
       .m_axis_tready(m_axis_rx_tready_to_dma),
       .m_axis_tlast(m_axis_rx_tlast_to_dma),
@@ -636,18 +643,28 @@ module mqnic_interface_rx #(
       .m_status_bad_frame (),
       .m_status_good_frame()
   );
-
   // ******************************************
   // Add IDS module here
   // FIFO_IN -- m_axis_* --> IDS --> s_axis_* --> FIFO_OUT
   // ******************************************
 
-  
-  full_matcher_if fif();
 
-  axi_fifo_rx #(.DATA_WIDTH(AXIS_DATA_WIDTH)) fm_rx(clk, clk, rst, m_axis_rx_tdata_to_ids, m_axis_rx_tvalid_to_ids, m_axis_rx_tkeep_to_ids, m_axis_rx_tlast_to_ids, m_axis_rx_tready_to_ids, fif);
-  full_matcher f_m(clk, ~rst, fif);
-  axi_fifo_tx #(.DATA_WIDTH(AXIS_DATA_WIDTH)) fm_tx(clk, rst, s_axis_rx_tdata_from_ids, s_axis_rx_tvalid_from_ids, s_axis_rx_tlast_from_ids, fif);
+  axis_full_matcher fm (
+      .aclk(clk),
+      .fclk(clk),
+      .rst(rst),
+      .tdata_rx(m_axis_rx_tdata_to_ids),
+      .tvalid_rx(m_axis_rx_tvalid_to_ids),
+      .tkeep_rx(m_axis_rx_tkeep_to_ids),
+      .tlast_rx(m_axis_rx_tlast_to_ids),
+      .tready_rx(m_axis_rx_tready_to_ids),
+
+      .tdata_tx (s_axis_rx_tdata_from_ids),
+      .tvalid_tx(s_axis_rx_tvalid_from_ids),
+      .tkeep_tx (s_axis_rx_tkeep_from_ids),
+      .tlast_tx (s_axis_rx_tlast_from_ids),
+      .tready_tx(s_axis_rx_tready_from_ids)
+  );
 
   axis_async_fifo #(
       .DEPTH(1024),
@@ -663,18 +680,18 @@ module mqnic_interface_rx #(
   ) ids_fifo_in (  // AXI input
       .s_clk(clk),
       .s_rst(rst),
-      .s_axis_tdata(s_axis_rx_tdata_from_input),
-      .s_axis_tkeep(0),
-      .s_axis_tvalid(s_axis_rx_tvalid_from_input),
-      .s_axis_tready(s_axis_rx_tready_from_input),
-      .s_axis_tlast(s_axis_rx_tlast_from_input),
-      .s_axis_tid(tx_axis_ptp_ts_tag),
+      .s_axis_tdata(s_axis_rx_tdata_from_ingress),
+      .s_axis_tkeep(s_axis_rx_tkeep_from_ingress),
+      .s_axis_tvalid(s_axis_rx_tvalid_from_ingress),
+      .s_axis_tready(s_axis_rx_tready_from_ingress),
+      .s_axis_tlast(s_axis_rx_tlast_from_ingress),
+      .s_axis_tid(0),
       .s_axis_tdest(0),
       .s_axis_tuser(0),
 
       // AXI output
       .m_clk(clk),
-      .m_rst(clk),
+      .m_rst(rst),
       .m_axis_tdata(m_axis_rx_tdata_to_ids),
       .m_axis_tkeep(m_axis_rx_tkeep_to_ids),
       .m_axis_tvalid(m_axis_rx_tvalid_to_ids),
@@ -692,6 +709,14 @@ module mqnic_interface_rx #(
       .m_status_bad_frame (),
       .m_status_good_frame()
   );
+
+  assign s_axis_rx_tdata_from_ingress = rx_axis_tdata_int;
+  assign s_axis_rx_tkeep_from_ingress = rx_axis_tkeep_int;
+  assign s_axis_rx_tvalid_from_ingress = rx_axis_tvalid_int;
+  assign rx_axis_tready_int = s_axis_rx_tready_from_ingress;
+  assign s_axis_rx_tlast_from_ingress = rx_axis_tlast_int;
+
+
 
   mqnic_ingress #(
       .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
@@ -786,14 +811,23 @@ module mqnic_interface_rx #(
       /*
      * AXI stream write data input
      */
-      .s_axis_write_data_tdata(rx_axis_tdata_int),
-      .s_axis_write_data_tkeep(rx_axis_tkeep_int),
-      .s_axis_write_data_tvalid(rx_axis_tvalid_int),
-      .s_axis_write_data_tready(rx_axis_tready_int),
-      .s_axis_write_data_tlast(rx_axis_tlast_int),
-      .s_axis_write_data_tid(rx_axis_tid_int),
-      .s_axis_write_data_tdest(rx_axis_tdest_int),
-      .s_axis_write_data_tuser(rx_axis_tuser_int),
+      .s_axis_write_data_tdata(m_axis_rx_tdata_to_dma),
+      .s_axis_write_data_tkeep(m_axis_rx_tkeep_to_dma),
+      .s_axis_write_data_tvalid(m_axis_rx_tvalid_to_dma),
+      .s_axis_write_data_tready(m_axis_rx_tready_to_dma),
+      .s_axis_write_data_tlast(m_axis_rx_tlast_to_dma),
+      .s_axis_write_data_tid(0),
+      .s_axis_write_data_tdest(0),
+      .s_axis_write_data_tuser(0),
+      // Original crdm
+      //   .s_axis_write_data_tdata(rx_axis_tdata_int),
+      //   .s_axis_write_data_tkeep(rx_axis_tkeep_int),
+      //   .s_axis_write_data_tvalid(rx_axis_tvalid_int),
+      //   .s_axis_write_data_tready(rx_axis_tready_int),
+      //   .s_axis_write_data_tlast(rx_axis_tlast_int),
+      //   .s_axis_write_data_tid(rx_axis_tid_int),
+      //   .s_axis_write_data_tdest(rx_axis_tdest_int),
+      //   .s_axis_write_data_tuser(rx_axis_tuser_int),
 
       /*
      * RAM interface
