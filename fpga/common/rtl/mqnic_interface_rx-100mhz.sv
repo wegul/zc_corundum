@@ -600,7 +600,82 @@ module mqnic_interface_rx #(
   wire                              tx_axis_ptp_ts_tag;
 
 
+  wire                              mmcm_locked;
+  wire                              mmcm_clkfb;
+  wire                              clk_100mhz_mmcm;
+  wire                              clk_100mhz;
+  wire                              rst_100mhz;
 
+  // M = 40, D = 5 sets Fvco = 2500 MHz
+  // Divide by 25 to get output frequency of 100 MHz
+  MMCME4_BASE #(
+      .BANDWIDTH("OPTIMIZED"),
+      .CLKOUT0_DIVIDE_F(25),
+      .CLKOUT0_DUTY_CYCLE(0.5),
+      .CLKOUT0_PHASE(0),
+      .CLKOUT1_DIVIDE(1),
+      .CLKOUT1_DUTY_CYCLE(0.5),
+      .CLKOUT1_PHASE(0),
+      .CLKOUT2_DIVIDE(1),
+      .CLKOUT2_DUTY_CYCLE(0.5),
+      .CLKOUT2_PHASE(0),
+      .CLKOUT3_DIVIDE(1),
+      .CLKOUT3_DUTY_CYCLE(0.5),
+      .CLKOUT3_PHASE(0),
+      .CLKOUT4_DIVIDE(1),
+      .CLKOUT4_DUTY_CYCLE(0.5),
+      .CLKOUT4_PHASE(0),
+      .CLKOUT5_DIVIDE(1),
+      .CLKOUT5_DUTY_CYCLE(0.5),
+      .CLKOUT5_PHASE(0),
+      .CLKOUT6_DIVIDE(1),
+      .CLKOUT6_DUTY_CYCLE(0.5),
+      .CLKOUT6_PHASE(0),
+      .CLKFBOUT_MULT_F(25),
+      .CLKFBOUT_PHASE(0),
+      .DIVCLK_DIVIDE(5),
+      .REF_JITTER1(0.010),
+      .CLKIN1_PERIOD(3.2),
+      .STARTUP_WAIT("FALSE"),
+      .CLKOUT4_CASCADE("FALSE")
+  ) clk_mmcm_inst (
+      .CLKIN1(clk),
+      .CLKFBIN(mmcm_clkfb),
+      .RST(rst),
+      .PWRDWN(1'b0),
+      .CLKOUT0(clk_100mhz_mmcm),
+      .CLKOUT0B(),
+      .CLKOUT1(),
+      .CLKOUT1B(),
+      .CLKOUT2(),
+      .CLKOUT2B(),
+      .CLKOUT3(),
+      .CLKOUT3B(),
+      .CLKOUT4(),
+      .CLKOUT5(),
+      .CLKOUT6(),
+      .CLKFBOUT(mmcm_clkfb),
+      .CLKFBOUTB(),
+      .LOCKED(mmcm_locked)
+  );
+
+  BUFG clk_100mhz_bufg_inst (
+      .I(clk_100mhz_mmcm),
+      .O(clk_100mhz)
+  );
+
+  sync_reset #(
+      .N(4)
+  ) sync_reset_100mhz_inst (
+      .clk(clk_100mhz),
+      .rst(~mmcm_locked),
+      .out(rst_100mhz)
+  );
+
+  // ******************************************
+  // Add IDS module here
+  // FIFO_IN -- m_axis_* --> IDS --> s_axis_* --> FIFO_OUT
+  // ******************************************
   axis_async_fifo #(
       .DEPTH(1024),
       .DATA_WIDTH(AXIS_DATA_WIDTH),
@@ -613,8 +688,8 @@ module mqnic_interface_rx #(
       .DROP_WHEN_FULL(1),
       .FRAME_FIFO(1)
   ) ids_fifo_out (  // AXI input
-      .s_clk(clk),
-      .s_rst(rst),
+      .s_clk(clk_100mhz),
+      .s_rst(rst_100mhz),
       .s_axis_tdata(s_axis_rx_tdata_from_ids),
       .s_axis_tkeep(s_axis_rx_tkeep_from_ids),
       .s_axis_tvalid(s_axis_rx_tvalid_from_ids),
@@ -644,16 +719,13 @@ module mqnic_interface_rx #(
       .m_status_bad_frame (),
       .m_status_good_frame()
   );
-  // ******************************************
-  // Add IDS module here
-  // FIFO_IN -- m_axis_* --> IDS --> s_axis_* --> FIFO_OUT
-  // ******************************************
+
 
 
   axis_full_matcher fm (
       .aclk(clk),
-      .fclk(clk),
-      .rst(rst),
+      .fclk(clk_100mhz),
+      .rst(rst_100mhz),
       .tdata_rx(m_axis_rx_tdata_to_ids),
       .tvalid_rx(m_axis_rx_tvalid_to_ids),
       .tkeep_rx(m_axis_rx_tkeep_to_ids),
@@ -691,8 +763,8 @@ module mqnic_interface_rx #(
       .s_axis_tuser(0),
 
       // AXI output
-      .m_clk(clk),
-      .m_rst(rst),
+      .m_clk(clk_100mhz),
+      .m_rst(rst_100mhz),
       .m_axis_tdata(m_axis_rx_tdata_to_ids),
       .m_axis_tkeep(m_axis_rx_tkeep_to_ids),
       .m_axis_tvalid(m_axis_rx_tvalid_to_ids),
