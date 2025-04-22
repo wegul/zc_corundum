@@ -25,7 +25,7 @@ module fpga_core #
     parameter RELEASE_INFO = 32'h00000000,
 
     // Board configuration
-    parameter QSFP_CNT = 2,
+    parameter QSFP_CNT = 1,
     parameter CH_CNT = QSFP_CNT*4,
     parameter CMS_ENABLE = 1,
     parameter FLASH_SEG_COUNT = 2,
@@ -34,7 +34,7 @@ module fpga_core #
     parameter FLASH_SEG0_SIZE = 32'h01002000,
 
     // Structural configuration
-    parameter IF_COUNT = 2,
+    parameter IF_COUNT = 1,
     parameter PORTS_PER_IF = 1,
     parameter SCHED_PER_IF = PORTS_PER_IF,
     parameter PORT_MASK = 0,
