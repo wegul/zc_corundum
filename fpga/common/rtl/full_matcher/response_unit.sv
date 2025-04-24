@@ -4,13 +4,13 @@ module response_unit
 (
   input logic clk, n_rst,
   full_matcher_if.fm fif,
-  input stg2_msg_t [N_CB_CHN-1:0] response
+  input resp_entry_t [N_CB_CHN-1:0] response
 );
 
   // the channel pointer will cycle through all channels,
   // stopping when it finds a valid entry and processes it
   logic [$clog2(N_CB_CHN)-1:0] chn_ptr, chn_ptr_next;
-  stg2_msg_t [N_CB_CHN-1:0] entry, entry_next;
+  resp_entry_t [N_CB_CHN-1:0] entry, entry_next;
 
   always_ff @ (posedge clk, negedge n_rst)
   begin
@@ -47,8 +47,9 @@ module response_unit
 
   assign fif.data_resp = entry[chn_ptr].data_resp;
   assign fif.rule_id_resp = entry[chn_ptr].rule_id_resp;
-  assign fif.data_id_resp = entry[chn_ptr].data_id_resp;
+  //assign fif.data_id_resp = entry[chn_ptr].data_id_resp;
   assign fif.match = entry[chn_ptr].match;
+  assign fif.last_resp = 1'b1;
   assign fif.valid_resp = entry[chn_ptr].valid;
 
 endmodule

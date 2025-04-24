@@ -14,6 +14,8 @@ module n_wide_fifo
   logic [$clog2(fif.N_FIFO_ENTRY_LOCAL):0] head_next, tail_next;
   logic [$clog2(fif.N_FIFO_ENTRY_LOCAL):0] capacity_next;
 
+  n_wide_fifo_if reg_fif ();
+
   always_ff @ (posedge clk, negedge n_rst)
   begin
     if (~n_rst)
@@ -29,6 +31,8 @@ module n_wide_fifo
         entry[i].data <= '0;
       end
       // fif.head <= '0;
+      fif.rule_id_out <= NO_RULE;
+      fif.data_out <= '0;
       fif.tail <= '0;
       fif.capacity <= fif.N_FIFO_ENTRY_LOCAL;
     end
@@ -45,6 +49,8 @@ module n_wide_fifo
         entry[i].data <= entry_next[i].data;
       end
       // fif.head <= head_next;
+      fif.rule_id_out <= reg_fif.rule_id_out;
+      fif.data_out <= reg_fif.data_out;
       fif.tail <= tail_next;
       fif.capacity <= capacity_next;
     end
@@ -118,9 +124,9 @@ module n_wide_fifo
   begin: OUTPUT_ENTRY_LOGIC
     fif.valid_out = entry[fif.raddr].valid;
     fif.cur_groups = entry[fif.raddr].num_groups - entry[fif.raddr].group_pointer;
-    fif.rule_id_out = entry[fif.raddr].groups[entry[fif.raddr].group_pointer];
+    reg_fif.rule_id_out = entry[fif.raddr].groups[entry[fif.raddr].group_pointer];
     fif.data_id_out = entry[fif.raddr].data_id;
-    fif.data_out = entry[fif.raddr].data;
+    reg_fif.data_out = entry[fif.raddr].data;
   end
 
   always_comb

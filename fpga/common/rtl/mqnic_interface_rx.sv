@@ -723,9 +723,9 @@ module mqnic_interface_rx #(
   // FIFO_IN -- m_axis_* --> IDS --> s_axis_* --> FIFO_OUT
   // ******************************************
 
-
+(* DONT_TOUCH = "yes" *)
   axis_full_matcher fm (
-      .aclk(clk),
+      .aclk(clk_100mhz_int),// Should use same 100mhz clock...
       .fclk(clk_100mhz_int),
       .rst(rst_100mhz_int),
       .tdata_rx(m_axis_rx_tdata_to_ids),

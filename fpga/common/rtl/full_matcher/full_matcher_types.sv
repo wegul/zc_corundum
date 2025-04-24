@@ -1,21 +1,21 @@
 //`include "./struct_s.sv"
 
 package full_matcher_types;
-  parameter N_CB_CHN = 2;
+  parameter N_CB_CHN = 32;
   parameter SYMBOL_WIDTH = 8;
   parameter NFA_STATUS_W = 3;
-  parameter NO_RULE = '0;
+  parameter NO_RULE = '1;
   parameter NULL_SYMBOL = '0;
-  parameter N_FIFO_ENTRY = 1;
+  parameter N_FIFO_ENTRY = 4;
   parameter MAX_PACKET_SIZE = 8*512; // In bits
-  parameter RID_WIDTH = 16; // For some reason I can't get this from struct_s
+  parameter RID_WIDTH = 10; // For some reason I can't get this from struct_s
   parameter PID_WIDTH = 16;
   parameter N_PIPES = 2;
   parameter PDU_SIZE = 8*512; // In bits
   parameter PACKET_SIZE = 8*1500; // In bits
   parameter GID_WIDTH = 16;
   parameter TOTAL_GROUPS = 512;
-  parameter MAX_GROUPS = 32;
+  parameter MAX_GROUPS = 8;
 
   typedef logic [RID_WIDTH-1:0] rule_id_t;
   typedef logic [SYMBOL_WIDTH-1:0] symbol_t;
@@ -56,6 +56,13 @@ package full_matcher_types;
     data_id_t data_id;
     logic [MAX_PACKET_SIZE-1:0] data;
   } stg2_msg_t;
+
+  typedef struct packed {
+    logic [MAX_PACKET_SIZE-1:0] data_resp;
+    rule_id_t rule_id_resp;
+    logic match;
+    logic valid;
+  } resp_entry_t;
 
   typedef struct packed
   {

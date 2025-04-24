@@ -1,6 +1,6 @@
 //`include "./full_matcher_if.sv"
 ////include "./crossbar_if.sv"
-//`define SMALL_IMPL // Use to decrease I/O when implementing
+`define SMALL_IMPL // Use to decrease I/O when implementing
 
 import full_matcher_types::*;
 
@@ -21,7 +21,7 @@ module full_matcher
   nfa_if nif ();
   `ifdef SMALL_IMPL
   full_matcher_if fif ();
-  assign fif.data = {(1500*8)*{data[0]}};
+  assign fif.data = {(512*8)*{data[0]}};
   assign fif.rule_id = rule_id_t'(rule_id);
   assign fif.valid = valid;
   assign match = |nif.match;

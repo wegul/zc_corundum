@@ -118,19 +118,19 @@ module packet_queue_load_balancer
     end
   end
 
-  always_comb
-  begin: OVERFLOW_RESPONSE_LOGIC
-    fif.data_resp = '0;
-    fif.rule_id_resp = '0;
-    fif.last_resp = '0;
-    fif.valid_resp = '0;
-    if (full | full_latch)
-    begin
-      fif.data_resp = fif.data;
-      fif.rule_id_resp = fif.rule_id;
-      fif.last_resp = fif.last;
-      fif.valid_resp = fif.valid;
-    end
-  end
+  // always_comb
+  // begin: OVERFLOW_RESPONSE_LOGIC
+  //   fif.data_resp = '0;
+  //   fif.rule_id_resp = '0;
+  //   fif.last_resp = '0;
+  //   fif.valid_resp = '0;
+  //   if (full | full_latch)
+  //   begin
+  //     fif.data_resp = fif.data;
+  //     fif.rule_id_resp = fif.rule_id;
+  //     fif.last_resp = fif.last;
+  //     fif.valid_resp = fif.valid;
+  //   end
+  // end
 
 endmodule

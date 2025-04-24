@@ -32,11 +32,13 @@ module axi_fifo_rx
   full_matcher_if.axi_rx fif
 );
 
+  localparam LG_RID_WIDTH = 16;
   localparam PIPE_LEN = 2;
   localparam BITS_PER_KEEP = DATA_WIDTH/KEEP_WIDTH;
   localparam ETHER_LEN = 14;
   localparam IP_LEN = 20;
-  localparam NUM_RULES_IDX = ETHER_LEN + IP_LEN;
+  //localparam NUM_RULES_IDX = ETHER_LEN + IP_LEN;
+  localparam NUM_RULES_IDX = MAX_PACKET_SIZE/8;
   localparam RULES_IDX = NUM_RULES_IDX + 1;
 
   logic [$clog2(MAX_PACKET_SIZE/DATA_WIDTH)+1:0] cur_index, cur_index_next;
@@ -47,8 +49,8 @@ module axi_fifo_rx
   logic [MAX_PACKET_SIZE/DATA_WIDTH-1:0] [KEEP_WIDTH-1:0] keep_acc;
 
   // for strobing in rules
-  logic [PIPE_LEN-1:0] [MAX_GROUPS-1:0] [RID_WIDTH-1:0] rule_acc_pipe;
-  logic [MAX_GROUPS-1:0] [RID_WIDTH-1:0] rule_acc;
+  logic [PIPE_LEN-1:0] [MAX_GROUPS-1:0] [LG_RID_WIDTH-1:0] rule_acc_pipe;
+  logic [MAX_GROUPS-1:0] [LG_RID_WIDTH-1:0] rule_acc;
   logic [7:0] cur_rule, cur_rule_next;
   logic [7:0] num_rules;
 
@@ -148,15 +150,15 @@ module axi_fifo_rx
       if (tvalid)
       begin
         // rule and data update
-        if (cur_index == '0)
+        if (cur_index == MAX_PACKET_SIZE/DATA_WIDTH)
         begin
-          num_rules <= tdata[8*NUM_RULES_IDX+:8] == '0 ? 'd1 : tdata[8*NUM_RULES_IDX+:8];
-          rule_acc <= tdata[DATA_WIDTH-1:8*RULES_IDX];
+          num_rules <= tdata[0+:8] == '0 ? 'd1 : tdata[0+:8];
+          rule_acc <= tdata[DATA_WIDTH-1:8];
         end
         else
         begin
-          data_acc[cur_index-1] <= tdata;
-          keep_acc[cur_index-1] <= tkeep;
+          data_acc[cur_index] <= tdata;
+          keep_acc[cur_index] <= tkeep;
         end
       end
       if (bypass)

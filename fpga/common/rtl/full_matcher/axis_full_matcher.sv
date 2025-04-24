@@ -22,8 +22,8 @@ module axis_full_matcher #(
     output tready_rx,
 
     output [DATA_WIDTH-1:0] tdata_tx,
-    output [KEEP_WIDTH-1:0] tkeep_tx,
     output tvalid_tx,
+    output [KEEP_WIDTH-1:0] tkeep_tx,
     output tlast_tx,
     input tready_tx
 );
@@ -36,6 +36,7 @@ module axis_full_matcher #(
   wire [KEEP_WIDTH-1:0] tkeep_bypass;
   wire tlast_bypass;
 
+  (* DONT_TOUCH = "yes" *)
   axi_fifo_rx #(
       .DATA_WIDTH(DATA_WIDTH)
   ) fm_rx (
@@ -54,11 +55,13 @@ module axis_full_matcher #(
       .tkeep_bypass(tkeep_bypass),
       .tlast_bypass(tlast_bypass)
   );
+  (* DONT_TOUCH = "yes" *)
   full_matcher f_m (
       fclk,
       ~rst,
       fif
   );
+  (* DONT_TOUCH = "yes" *)
   axi_fifo_tx #(
       .DATA_WIDTH(DATA_WIDTH)
   ) fm_tx (

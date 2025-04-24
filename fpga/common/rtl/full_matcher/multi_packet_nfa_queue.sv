@@ -13,7 +13,7 @@ module multi_packet_nfa_queue
 
   genvar i;
 
-  typedef enum logic [2:0] {SEARCH, CHECK, PROC, WAIT_LATCH1, WAIT_LATCH2, DONE, CLEAR} channel_state_t;
+  typedef enum logic [2:0] {SEARCH, CHECK, PROC, WAIT_LATCH1, WAIT_LATCH2, DONE, CLEAR, FIFO_LATCH_WAIT} channel_state_t;
 
   parameter N_FIFO_ENTRY_LOCAL = N_FIFO_ENTRY;
   parameter BRAM_WAIT_COUNT = 8;
@@ -26,11 +26,12 @@ module multi_packet_nfa_queue
   logic [N_CB_CHN-1:0] [$clog2(N_FIFO_ENTRY_LOCAL):0] channel_pointer, channel_pointer_next; // which entry in the queue the channel is accessing
   logic [N_CB_CHN-1:0] [$clog2(MAX_PACKET_SIZE/8):0] byte_count, byte_count_next; // which byte is it processing
   logic [N_CB_CHN-1:0] [3:0] bram_wait, bram_wait_next; // counter to wait for bram pipeline to fill
-  stg2_msg_t [N_CB_CHN-1:0] response; // message for stage 1
+  resp_entry_t [N_CB_CHN-1:0] response; // message for stage 1
 
   packet_queue_load_balancer load_balancer (.clk, .n_rst, .fif, .fifoif);
 
-  //response_unit ru (.clk, .n_rst, .fif, .response);
+  (* DONT_TOUCH = "yes" *)
+  response_unit ru (.clk, .n_rst, .fif, .response);
 
   n_wide_fifo fifo [N_CB_CHN-1:0] (.clk, .n_rst,
                     .fif(fifoif));
@@ -133,9 +134,12 @@ module multi_packet_nfa_queue
             if (fifoif[i].cur_groups == 'd1 || nif.match[i])
               channel_state_next[i] = CLEAR;
             else
-              channel_state_next[i] = SEARCH;
+              channel_state_next[i] = FIFO_LATCH_WAIT;
           end
           CLEAR  : begin
+            channel_state_next[i] = FIFO_LATCH_WAIT;
+          end
+          FIFO_LATCH_WAIT : begin // wait for rule_id latch
             channel_state_next[i] = SEARCH;
           end
         endcase
@@ -201,13 +205,13 @@ module multi_packet_nfa_queue
             nif.symbol[i] = fifoif[i].data_out[8*byte_count[i]+:8];
             fifoif[i].inv_entry = 1'b0;
             fifoif[i].done = 1'b1;
-            // if (nif.match[i] || fifoif[i].cur_groups == 'd1)
-            // begin
-            //   response[i].rule_id_resp = fifoif[i].rule_id_out;
-            //   response[i].data_id_resp = fifoif[i].data_id_out;
-            //   response[i].match = nif.match[i];
-            //   response[i].valid = 1'b1;
-            // end
+            if (nif.match[i] || fifoif[i].cur_groups == 'd1)
+            begin
+              response[i].rule_id_resp = fifoif[i].rule_id_out;
+              response[i].data_resp = fifoif[i].data_out;
+              response[i].match = nif.match[i];
+              response[i].valid = nif.match[i]; // NOTE: this is normally 1, changed to indicate malicious packets
+            end
           end
           CLEAR  : begin
             nif.request[i] = 1'b0; // 0 or 1?

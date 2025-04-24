@@ -14,6 +14,7 @@ interface full_matcher_if ();
   rule_id_t rule_id_resp;
   logic last_resp; // last rule
   logic valid_resp;
+  logic match;
 
   // rule_id_t rule_id_resp;
   // data_id_t data_id_resp;
@@ -25,7 +26,7 @@ interface full_matcher_if ();
 
   modport fm ( // full matcher
     input data, rule_id, valid, last,
-    output data_resp, rule_id_resp, valid_resp, last_resp
+    output data_resp, rule_id_resp, valid_resp, last_resp, match
     //output rule_id_resp, data_id_resp, match, valid_resp, full
 
   );

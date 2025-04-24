@@ -1,10 +1,11 @@
 //`include "../struct_s.sv"
+import full_matcher_types::*;
+
+import full_matcher_types::*;
 
 interface n_wide_fifo_if #(
-  parameter N_FIFO_ENTRY_LOCAL = 8
+  parameter N_FIFO_ENTRY_LOCAL = N_FIFO_ENTRY
 );
-
-  import full_matcher_types::*;
 
   logic [$clog2(N_FIFO_ENTRY_LOCAL):0] raddr;
   logic inv_entry;
