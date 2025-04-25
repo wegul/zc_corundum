@@ -1,13 +1,13 @@
 //`include "./struct_s.sv"
 
 package full_matcher_types;
-  parameter N_CB_CHN = 32;
+  parameter N_CB_CHN = 2;
   parameter SYMBOL_WIDTH = 8;
   parameter NFA_STATUS_W = 3;
   parameter NO_RULE = '1;
   parameter NULL_SYMBOL = '0;
   parameter N_FIFO_ENTRY = 4;
-  parameter MAX_PACKET_SIZE = 8*512; // In bits
+  parameter MAX_PACKET_SIZE = 8*512; // In bits, 512
   parameter RID_WIDTH = 10; // For some reason I can't get this from struct_s
   parameter PID_WIDTH = 16;
   parameter N_PIPES = 2;

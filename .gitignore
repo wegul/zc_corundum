@@ -33,7 +33,6 @@ modules.order
 **/fpga.hw/*
 **/fpga.sim/*
 **/fpga.ip_user_files/*
-**/nfa_tableold/** 
 **/nfa_table/** 
 
 
