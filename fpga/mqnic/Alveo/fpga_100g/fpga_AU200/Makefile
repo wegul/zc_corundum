@@ -115,8 +115,8 @@ SYN_FILES += lib/pcie/rtl/pcie_us_cfg.v
 SYN_FILES += lib/pcie/rtl/pulse_merge.v
 
 #SYN_FILES += $(find rtl/common/full_matcher/src/)
-SYN_FILES += $(wildcard rtl/common/full_matcher/src/nfa_table/*)
-SYN_FILES += $(wildcard rtl/common/full_matcher/src/*)
+SYN_FILES += $(wildcard rtl/full_matcher/nfa_table/*)
+SYN_FILES += $(wildcard rtl/full_matcher/*)
 
 
 
