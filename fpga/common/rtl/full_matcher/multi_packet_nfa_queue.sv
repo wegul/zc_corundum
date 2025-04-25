@@ -31,7 +31,8 @@ module multi_packet_nfa_queue
   packet_queue_load_balancer load_balancer (.clk, .n_rst, .fif, .fifoif);
 
   (* DONT_TOUCH = "yes" *)
-  response_unit ru (.clk, .n_rst, .fif, .response);
+  response_unit ru (.clk, .n_rst, .data_resp(fif.data_resp), .rule_id_resp(fif.rule_id_resp), .valid_resp(fif.valid_resp),
+                    .last_resp(fif.last_resp), .match(fif.match), .response);
 
   n_wide_fifo fifo [N_CB_CHN-1:0] (.clk, .n_rst,
                     .fif(fifoif));

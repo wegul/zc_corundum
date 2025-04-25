@@ -3,7 +3,9 @@ import full_matcher_types::*;
 module response_unit
 (
   input logic clk, n_rst,
-  full_matcher_if.fm fif,
+  output logic [MAX_PACKET_SIZE-1:0] data_resp,
+  output logic [RID_WIDTH-1:0] rule_id_resp,
+  output logic valid_resp, last_resp, match,
   input resp_entry_t [N_CB_CHN-1:0] response
 );
 
@@ -45,11 +47,11 @@ module response_unit
       entry_next[chn_ptr].valid = 1'b0;
   end
 
-  assign fif.data_resp = entry[chn_ptr].data_resp;
-  assign fif.rule_id_resp = entry[chn_ptr].rule_id_resp;
+  assign data_resp = entry[chn_ptr].data_resp;
+  assign rule_id_resp = entry[chn_ptr].rule_id_resp;
   //assign fif.data_id_resp = entry[chn_ptr].data_id_resp;
-  assign fif.match = entry[chn_ptr].match;
-  assign fif.last_resp = 1'b1;
-  assign fif.valid_resp = entry[chn_ptr].valid;
+  assign match = entry[chn_ptr].match;
+  assign last_resp = 1'b1;
+  assign valid_resp = entry[chn_ptr].valid;
 
 endmodule

@@ -1,6 +1,5 @@
 //`include "./full_matcher_if.sv"
 ////include "./crossbar_if.sv"
-`define SMALL_IMPL // Use to decrease I/O when implementing
 
 import full_matcher_types::*;
 
