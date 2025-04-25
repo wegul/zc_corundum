@@ -35,7 +35,8 @@ modules.order
 **/fpga.ip_user_files/*
 **/nfa_table/** 
 
-
+# TCL file
+*.tcl
 
 # ILA log file
 *.csv
