@@ -21,6 +21,8 @@ modules.order
 *.log
 *.str
 
+*.xdc
+
 # Vivado synthesis files
 *.xml
 *.rpt
@@ -33,7 +35,7 @@ modules.order
 **/fpga.hw/*
 **/fpga.sim/*
 **/fpga.ip_user_files/*
-**/nfa_table/** 
+**/nfa_table/**
 
 # TCL file
 *.tcl
